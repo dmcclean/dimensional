@@ -57,7 +57,8 @@ library
                        Numeric.Units.Dimensional.DK.UnitNames,
                        Numeric.Units.Dimensional.DK.UnitNames.InterchangeNames,
                        Numeric.Units.Dimensional.DK.Variants
-  other-modules:       Numeric.Units.Dimensional.DK.UnitNames.Internal
+  other-modules:       Numeric.Units.Dimensional.DK.UnitNames.Internal,
+                       Numeric.Units.Dimensional.DK.Dimensions.OptimalFactoring
 
 test-suite tests
   type:                exitcode-stdio-1.0
