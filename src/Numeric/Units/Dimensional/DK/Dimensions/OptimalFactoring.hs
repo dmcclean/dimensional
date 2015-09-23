@@ -32,11 +32,10 @@ siCostMap = id
           $ defaultCostMap
 
 minCost :: CostMap -> Dimension' -> Path
-minCost (CostMap gs) d = minCost' d gs''' emptyPath (naiveCost d)
+minCost (CostMap gs) d = minCost' d gs'' emptyPath (naiveCost d)
   where
-    gs''' = sortBy (comparing fst) gs''
-    gs'' = gs' ++ fmap (\(s,c) -> (recip s,c)) gs'
-    gs' = filter (\(d',_) -> relevant d d') gs
+    gs'' = sortBy (comparing fst) gs'
+    gs' = gs ++ fmap (\(s,c) -> (recip s,c)) gs
 
 minCost' :: Dimension' -> [Step] -> Path -> Cost -> Path
 minCost' d _  p@(_, c) lim | d == dOne = p
@@ -44,7 +43,7 @@ minCost' d _  p@(_, c) lim | d == dOne = p
 minCost' d [] _        _   = ([d], 1 P./ 0) -- we really shouldn't reach here because we have all the generators as possible steps to start with
 minCost' d gs p        lim = leastCostly [minCost' (d / ds) (retainRelevant ds gs) (extend p s) lim | s@(ds, _) <- gs]
   where
-    retainRelevant ds = filter (\(ds',_) -> relevant (d / ds) ds' && ds' /= recip ds && ds <= ds')
+    retainRelevant ds = filter (\(ds',_) -> ds' /= recip ds && ds <= ds')
 
 emptyPath :: Path
 emptyPath = ([], 0)
