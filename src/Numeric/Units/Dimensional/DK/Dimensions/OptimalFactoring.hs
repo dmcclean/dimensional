@@ -4,7 +4,7 @@ module Numeric.Units.Dimensional.DK.Dimensions.OptimalFactoring
 where
 
 import Data.Foldable
-import Data.List (sort)
+import Data.List (sortBy)
 import Data.Ord
 import Data.Proxy
 import Numeric.Units.Dimensional.DK.Dimensions.TermLevel
@@ -34,7 +34,7 @@ siCostMap = id
 minCost :: CostMap -> Dimension' -> Path
 minCost (CostMap gs) d = minCost' d gs''' emptyPath (naiveCost d)
   where
-    gs''' = sort gs''
+    gs''' = sortBy (comparing fst) gs''
     gs'' = gs' ++ fmap (\(s,c) -> (recip s,c)) gs'
     gs' = filter (\(d',_) -> relevant d d') gs
 
