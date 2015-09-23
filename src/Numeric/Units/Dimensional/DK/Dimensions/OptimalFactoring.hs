@@ -12,8 +12,6 @@ import Numeric.Units.Dimensional.DK.Quantities
 import Prelude hiding ((/), (*), recip, any, sum)
 import qualified Prelude as P
 
-import Debug.Trace
-
 type Cost = Double
 
 type Step = (Dimension', Cost)
@@ -27,6 +25,7 @@ defaultCostMap = CostMap . fmap ((, 1)) $ [dLength, dMass, dTime, dElectricCurre
 insert :: Step -> CostMap -> CostMap
 insert s (CostMap cs) = CostMap (s : cs) -- todo: validate it
 
+siCostMap :: CostMap
 siCostMap = id
           $ insert (dimension (Proxy :: Proxy DPower), 0.5)
           $ insert (dimension (Proxy :: Proxy DElectricPotential), 0.5)
@@ -43,7 +42,7 @@ minCost' :: Dimension' -> [Step] -> Path -> Cost -> Path
 minCost' d _  p@(_, c) lim | d == dOne = p
                            | c >= lim  = ([d], 1 P./ 0)
 minCost' d [] _        _   = ([d], 1 P./ 0) -- we really shouldn't reach here because we have all the generators as possible steps to start with
-minCost' d gs p@(_, c) lim = leastCostly [minCost' (d / ds) (retainRelevant ds gs) (extend p s) lim | s@(ds, _) <- gs]
+minCost' d gs p        lim = leastCostly [minCost' (d / ds) (retainRelevant ds gs) (extend p s) lim | s@(ds, _) <- gs]
   where
     retainRelevant ds = filter (\(ds',_) -> relevant (d / ds) ds' && ds' /= recip ds && ds <= ds')
 
