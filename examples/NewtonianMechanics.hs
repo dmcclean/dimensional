@@ -22,19 +22,19 @@ forceFromChangeInMomentum :: (Fractional a) => Momentum a -> Time a -> Force a
 forceFromChangeInMomentum dp dt = dp / dt
 
 rotationalKineticEnergy :: (Fractional a) => MomentOfInertia a -> AngularVelocity a -> Energy a
-rotationalKineticEnergy i w = i * w ^ pos2 / _2
+rotationalKineticEnergy i w = i * w ^ pos2 / (2 *~ radian ^ pos2)
 
-rotationalWork :: (Num a) => Torque a -> PlaneAngle a -> Energy a
-rotationalWork t th = t * th
+rotationalWork :: (Fractional a) => Torque a -> PlaneAngle a -> Energy a
+rotationalWork t th = t * th / (1 *~ radian)
 
-rotationalMomentum :: (Num a) => MomentOfInertia a -> AngularVelocity a -> AngularMomentum a
-rotationalMomentum i w = i * w
+rotationalMomentum :: (Fractional a) => MomentOfInertia a -> AngularVelocity a -> AngularMomentum a
+rotationalMomentum i w = i * w / (1 *~ radian)
 
-rotationalPower :: (Num a) => Torque a -> AngularVelocity a -> Power a
-rotationalPower t w = t * w
+rotationalPower :: (Fractional a) => Torque a -> AngularVelocity a -> Power a
+rotationalPower t w = t * w / (1 *~ radian)
 
 torque :: (Fractional a) => Force a -> Length a -> Torque a
-torque r f = r * f / (1 *~ radian)
+torque r f = r * f
 
 torqueFromChangeInMomentum :: (Fractional a) => AngularMomentum a -> Time a -> Torque a
 torqueFromChangeInMomentum dL dt = dL / dt

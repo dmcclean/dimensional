@@ -345,10 +345,10 @@ type KinematicViscosity  = Quantity DKinematicViscosity
 type DFirstMassMoment = 'Dim 'Pos1 'Pos1 'Zero 'Zero 'Zero 'Zero 'Zero 'Zero
 type FirstMassMoment = Quantity DFirstMassMoment
 
-type DMomentOfInertia = 'Dim 'Pos2 'Pos1 'Zero 'Zero 'Zero 'Zero 'Zero 'Neg2
+type DMomentOfInertia = 'Dim 'Pos2 'Pos1 'Zero 'Zero 'Zero 'Zero 'Zero 'Zero
 type MomentOfInertia = Quantity DMomentOfInertia
 
-type DAngularMomentum = 'Dim 'Pos2 'Pos1 'Neg1 'Zero 'Zero 'Zero 'Zero 'Neg1
+type DAngularMomentum = 'Dim 'Pos2 'Pos1 'Neg1 'Zero 'Zero 'Zero 'Zero 'Zero
 type AngularMomentum = Quantity DAngularMomentum
 
 {-
@@ -390,7 +390,7 @@ type Angle = Quantity DAngle -- Abbreviation
 type DThrust = DForce
 type Thrust = Force
 
-type DTorque = 'Dim 'Pos2 'Pos1 'Neg2 'Zero 'Zero 'Zero 'Zero 'Neg1
+type DTorque = 'Dim 'Pos2 'Pos1 'Neg2 'Zero 'Zero 'Zero 'Zero 'Zero
 type Torque = Quantity DTorque
 
 type DEnergyPerUnitMass = DSpecificEnergy
