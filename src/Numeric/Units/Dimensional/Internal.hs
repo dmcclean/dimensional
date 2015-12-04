@@ -46,7 +46,7 @@ import qualified Data.Vector.Unboxed.Base as U
 import Prelude
   ( Show, Eq(..), Ord, Bounded(..), Num, Fractional, Functor
   , String, Maybe(..)
-  , (.), ($), (++), (+), (/)
+  , (.), ($), (++), (+), (/), (&&)
   , show, otherwise, undefined, error, fmap
   )
 
@@ -98,6 +98,9 @@ instance (Typeable m) => KnownVariant ('DUnit m) where
                                    | otherwise          = error "Shouldn't be reachable. Needed a metric name but got a non-metric one."
   injectValue _        _ = error "Shouldn't be reachable. Needed to name a quantity."
   dmap f (Unit n e x) = Unit n e (f x)
+
+instance (Eq a) => Eq (Unit m d a) where
+  (Unit n1 e1 v1) == (Unit n2 e2 v2) = (n1 == n2) && (areExactlyEqual e1 e2) && (v1 == v2)
 
 -- GHC is somewhat unclear about why, but it won't derive this instance, so we give it explicitly.
 instance (Bounded a) => Bounded (Quantity d a) where
