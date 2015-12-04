@@ -13,7 +13,7 @@ where
 import Data.Maybe
 import Data.Proxy
 import Numeric.Units.Dimensional.Prelude
-import Numeric.Units.Dimensional.Dynamic
+import Numeric.Units.Dimensional.Dynamic hiding ((*), recip)
 
 class Vector (v :: *) where
   type Dimensions v :: [Dimension]
