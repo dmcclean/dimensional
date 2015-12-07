@@ -15,7 +15,7 @@ import Data.Proxy
 import Numeric.Units.Dimensional.Prelude
 import Numeric.Units.Dimensional.Dynamic hiding ((*), recip)
 
-class Vector (v :: *) where
+class VectorSpace (v :: *) where
   type Dimensions v :: [Dimension]
   fromList :: Real b => [AnyQuantity b] -> Maybe v
   toList :: Fractional a => v -> [AnyQuantity a]
@@ -30,35 +30,50 @@ class Vector (v :: *) where
 infixl 6 ^+^, ^-^
 
 -- scale really shouldn't be here, because this might be an affine type
-class (Vector v) => MonoVector (v :: *) where
+class (VectorSpace v) => MonoVectorSpace (v :: *) where
   type Element v :: *
   fromMonoList :: [AnyQuantity (Element v)] -> Maybe v
   toMonoList :: v -> [AnyQuantity (Element v)]
-  fromRawList :: [Element v] -> Maybe v
-  toRawList :: v -> [Element v]
   scale :: Scalar v -> v -> v
 
 type Scalar v = Dimensionless (Element v)
 
 infixr 7 ^/
-(^/) :: (MonoVector v, Fractional (Element v)) => v -> Scalar v -> v
+(^/) :: (MonoVectorSpace v, Fractional (Element v)) => v -> Scalar v -> v
 x ^/ s = scale (recip s) x
 
 infixl 7 ^*, *^
-(^*) :: (MonoVector v) => v -> Scalar v -> v
+(^*) :: (MonoVectorSpace v) => v -> Scalar v -> v
 (^*) = flip scale
 
-(*^) :: (MonoVector v) => Scalar v -> v -> v
+(*^) :: (MonoVectorSpace v) => Scalar v -> v -> v
 (*^) = scale
 
-lerp :: (MonoVector v) => v -> v -> Scalar v -> v
+lerp :: (MonoVectorSpace v) => v -> v -> Scalar v -> v
 lerp a b t = a ^+^ t *^ (b ^-^ a)
 
-changeVectorRep :: forall v1 v2 a.(Vector v1, Vector v2, Real a, Fractional a, Dimensions v1 ~ Dimensions v2) => Proxy a -> v1 -> v2
+changeVectorRep :: forall v1 v2 a.(VectorSpace v1, VectorSpace v2, Real a, Fractional a, Dimensions v1 ~ Dimensions v2) => Proxy a -> v1 -> v2
 changeVectorRep _ = fromJust . fromList . (toList :: v1 -> [AnyQuantity a])
 
+class VectorSpace (Diff p) => AffineSpace (p :: *) where
+  type Diff p :: *
+  (.-.) :: p -> p -> Diff p
+  (.+^) :: p -> Diff p -> p
+
+infix 6 .-.
+infixl 6 .+^
+
+(.-^) :: AffineSpace p => p -> Diff p -> p
+p .-^ v = p .+^ negateV v
+
+infixl 6 .-^
+
+class MetricSpace (v :: *) where
+  type DistanceDimension v :: Dimension
+  distance :: (Floating a) =>  v -> v -> Quantity (DistanceDimension v) a
+
 -- Individual quantities can be viewed as single element vectors
-instance (Real a, Fractional a, KnownDimension d) => Vector (Quantity d a) where
+instance (Real a, Fractional a, KnownDimension d) => VectorSpace (Quantity d a) where
   type Dimensions (Quantity d a) = '[d]
   fromList [x] = fmap changeRep . promoteQuantity $ x
   fromList _   = Nothing
@@ -68,11 +83,24 @@ instance (Real a, Fractional a, KnownDimension d) => Vector (Quantity d a) where
   negateV = negate
   (^-^) = (-)
 
-instance (Real a, Fractional a, KnownDimension d) => MonoVector (Quantity d a) where
+instance (Real a, Fractional a, KnownDimension d) => MonoVectorSpace (Quantity d a) where
   type Element (Quantity d a) = a
   fromMonoList [x] = promoteQuantity x
   toMonoList x = [demoteQuantity x]
-  fromRawList [x] = Just $ x *~ siUnit
-  fromRawList _   = Nothing
-  toRawList x = [x /~ siUnit]
   scale s x = s * x
+
+instance (Real a, Fractional a, KnownDimension d) => MetricSpace (Quantity d a) where
+  type DistanceDimension (Quantity d a) = d
+  distance x y = changeRep $ x ^-^ y
+
+newtype Torsor v = Torsor v
+  deriving (Eq, Ord)
+
+instance (VectorSpace v) => AffineSpace (Torsor v) where
+  type Diff (Torsor v) = v
+  (Torsor p1) .-. (Torsor p2) = p1 ^-^ p2
+  (Torsor p) .+^ x = Torsor $ p ^+^ x
+
+instance (MetricSpace v) => MetricSpace (Torsor v) where
+  type DistanceDimension (Torsor v) = DistanceDimension v
+  distance (Torsor x) (Torsor y) = distance x y
