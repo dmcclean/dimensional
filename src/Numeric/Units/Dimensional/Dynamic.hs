@@ -52,7 +52,7 @@ import qualified Numeric.Units.Dimensional.Dimensions.TermLevel as D
 class DynamicQuantity (q :: * -> *) where
   -- | Converts a 'Quantity' of statically known 'Dimension' into an dynamic quantity
   -- such as an 'AnyQuantity' or a 'DynQuantity'.
-  demoteQuantity :: (KnownDimension d) => Quantity d a -> q a -- GHC 7.8 doesn't expand associated type synonyms in instance signatures, see Trac 9582
+  demoteQuantity :: (KnownDimension d) => Quantity d a -> q a
   -- | Converts an dynamic quantity such as an 'AnyQuantity' or a 'DynQuantity' into a
   -- 'Quantity' of statically known 'Dimension', or 'Nothing' if the dynamic quantity
   -- does not represent a 'Quantity' of that dimension.
@@ -96,7 +96,7 @@ instance Num a => Monoid (AnyQuantity a) where
   mempty = demoteQuantity (1 *~ one)
   mappend (AnyQuantity d1 a1) (AnyQuantity d2 a2) = AnyQuantity (d1 D.* d2) (a1 P.* a2)
 
--- | Possibly a 'Quantity' whose 'Dimension' is only known statically.
+-- | Possibly a 'Quantity' whose 'Dimension' is only known dynamically.
 --
 -- By modeling the absence of a value, this type differs from 'AnyQuantity' in that it may
 -- not be a 'Quantity' of any 'Dimension' whatsoever, but in exchange it gains instances
@@ -231,6 +231,8 @@ demoteUnit' = demoteUnit
 -- | Converts an 'AnyUnit' into a 'Unit' of statically known 'Dimension', or 'Nothing' if the dimension does not match.
 --
 -- The result is represented in 'ExactPi', conversion to other representations is possible using 'changeRepApproximate'.
+--
+-- The result is always tagged as 'NonMetric', conversion to a 'Metric' unit can be attempted using 'strengthen'.
 promoteUnit :: forall d.(KnownDimension d) => AnyUnit -> Maybe (Unit 'NonMetric d ExactPi)
 promoteUnit (AnyUnit dim n e) | dim == dim' = Just $ mkUnitR n e siUnit
                               | otherwise   = Nothing
@@ -253,6 +255,8 @@ recip (AnyUnit d n e) = AnyUnit (D.recip d) (N.nOne N./ n) (P.recip e)
 (^) :: (P.Integral a) => AnyUnit -> a -> AnyUnit
 (AnyUnit d n e) ^ x = AnyUnit (d D.^ P.fromIntegral x) (n N.^ P.fromIntegral x) (e P.^ x)
 
+-- | Applies a prefix to a dynamic unit.
+-- Returns 'Nothing' if the 'Unit' was 'NonMetric' and thus could not accept a prefix.
 applyPrefix :: N.Prefix -> AnyUnit -> Maybe AnyUnit
 applyPrefix p (AnyUnit d n e) = do
                                   n' <- N.strengthen n
