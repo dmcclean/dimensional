@@ -86,6 +86,7 @@ instance (Real a, Fractional a, KnownDimension d) => VectorSpace (Quantity d a) 
 instance (Real a, Fractional a, KnownDimension d) => MonoVectorSpace (Quantity d a) where
   type Element (Quantity d a) = a
   fromMonoList [x] = promoteQuantity x
+  fromMonoList _ = Nothing
   toMonoList x = [demoteQuantity x]
   scale s x = s * x
 
