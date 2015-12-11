@@ -16,7 +16,11 @@ where
 import Data.Maybe
 import Data.Proxy
 import Numeric.Units.Dimensional.Prelude
-import Numeric.Units.Dimensional.Dynamic hiding ((*), recip)
+import Numeric.Units.Dimensional.Coercion
+import Numeric.Units.Dimensional.Dynamic hiding ((*), (^), recip)
+import Numeric.NumType.DK.Integers
+  ( TypeInt (Pos2) )
+import qualified Prelude as P
 
 class VectorSpace (v :: *) where
   type Dimensions v :: [Dimension]
@@ -74,6 +78,12 @@ infixl 6 .-^
 class MetricSpace (v :: *) where
   type DistanceDimension v :: Dimension
   distance :: (Floating a) =>  v -> v -> Quantity (DistanceDimension v) a
+  distance x y = Quantity . P.sqrt . unQuantity $ quadrance x y -- This implementation cannot use the dimensionally typed sqrt because it can't deduce that the square root of the squared dimension is the same
+  quadrance :: (Floating a) => v -> v -> Quantity ((DistanceDimension v) ^ 'Pos2) a
+  quadrance x y = d ^ pos2
+    where
+      d = distance x y
+  {-# MINIMAL distance | quadrance #-}
 
 -- Individual quantities can be viewed as single element vectors
 instance (Real a, Fractional a, KnownDimension d) => VectorSpace (Quantity d a) where
@@ -97,6 +107,7 @@ instance (Real a, Fractional a, KnownDimension d) => MetricSpace (Quantity d a) 
   type DistanceDimension (Quantity d a) = d
   distance x y = changeRep $ x ^-^ y
 
+-- General purpose vectors.
 data Vector (ds :: [Dimension]) a where
   VCons :: Quantity d a -> Vector ds a -> Vector (d ': ds) a
   VNil  :: Vector '[] a
@@ -142,6 +153,16 @@ instance (Real a, Fractional a, KnownDimension d, a ~ Element (Vector ds a), Mon
   fromMonoList _ = Nothing
   toMonoList (VCons x v) = (demoteQuantity x) : toMonoList v
   scale s (VCons x v) = VCons (scale s x) (scale s v)
+
+instance (Real a, Fractional a) => MetricSpace (Vector '[d] a) where
+  type DistanceDimension (Vector '[d] a) = d
+  quadrance (VCons x1 VNil) (VCons x2 VNil) = changeRep ((x1 - x2) ^ pos2)
+  quadrance _ _ = error "Unreachable."
+
+-- The mention of d here is necessary to prevent this instance from overlapping with the base case of Vector '[DLength] a
+instance (Real a, Fractional a, d ~ (DistanceDimension (Vector (d' ': ds) a)), MetricSpace (Vector (d' ': ds) a)) => MetricSpace (Vector (d ': d' ': ds) a) where
+  type DistanceDimension (Vector (d ': d' ': ds) a) = d
+  quadrance (VCons x1 v1) (VCons x2 v2) = changeRep ((x1 - x2) ^ pos2) + quadrance v1 v2
 
 -- Torsors, by pretending to forget the origin and thus the ability to scale.
 newtype Torsor v = Torsor v
