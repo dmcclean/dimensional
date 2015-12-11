@@ -13,6 +13,7 @@
 module Numeric.Units.Dimensional.Vectors
 where
 
+import Data.List (intercalate)
 import Data.Maybe
 import Data.Proxy
 import Numeric.Units.Dimensional.Prelude
@@ -163,6 +164,18 @@ instance (Real a, Fractional a) => MetricSpace (Vector '[d] a) where
 instance (Real a, Fractional a, d ~ (DistanceDimension (Vector (d' ': ds) a)), MetricSpace (Vector (d' ': ds) a)) => MetricSpace (Vector (d ': d' ': ds) a) where
   type DistanceDimension (Vector (d ': d' ': ds) a) = d
   quadrance (VCons x1 v1) (VCons x2 v2) = changeRep ((x1 - x2) ^ pos2) + quadrance v1 v2
+
+instance Show (Vector '[] a) where
+  show VNil = "<| |>"
+
+instance (Show a, Real a, Fractional a, KnownDimension d, a ~ Element (Vector ds a), MonoVectorSpace (Vector ds a)) => Show (Vector (d ': ds) a) where
+  show v = "<| " ++ elems v ++ " |>"
+    where
+      elems = intercalate ", " . fmap show . toMonoList
+
+type V2 d = Vector '[d, d]
+type V3 d = Vector '[d, d, d]
+type V4 d = Vector '[d, d, d, d]
 
 -- Torsors, by pretending to forget the origin and thus the ability to scale.
 newtype Torsor v = Torsor v
