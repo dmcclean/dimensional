@@ -16,7 +16,7 @@ where
 import Data.List (intercalate)
 import Data.Maybe
 import Data.Proxy
-import Numeric.Units.Dimensional.Prelude
+import Numeric.Units.Dimensional.Prelude hiding (length)
 import Numeric.Units.Dimensional.Coercion
 import Numeric.Units.Dimensional.Dynamic hiding ((*), (^), recip)
 import Numeric.NumType.DK.Integers
@@ -106,7 +106,7 @@ instance (Real a, Fractional a, KnownDimension d) => MonoVectorSpace (Quantity d
 
 instance (Real a, Fractional a, KnownDimension d) => MetricSpace (Quantity d a) where
   type DistanceDimension (Quantity d a) = d
-  distance x y = changeRep $ x ^-^ y
+  distance x y = changeRep . abs $ x ^-^ y
 
 -- General purpose vectors.
 data Vector (ds :: [Dimension]) a where
@@ -172,6 +172,13 @@ instance (Show a, Real a, Fractional a, KnownDimension d, a ~ Element (Vector ds
   show v = "<| " ++ elems v ++ " |>"
     where
       elems = intercalate ", " . fmap show . toMonoList
+
+-- | In a 'MetricSpace' that is also a 'VectorSpace' the 'length' of a vector is its 'distance' from the zero vector, 'zeroV'.
+length :: (VectorSpace v, MetricSpace v, Floating a) => v -> Quantity (DistanceDimension v) a
+length = distance zeroV
+
+normalize :: (MonoVectorSpace v, MetricSpace v, DOne ~ DistanceDimension v, Floating (Element v)) => v -> v
+normalize x = scale (recip . length $ x) x
 
 type V2 d = Vector '[d, d]
 type V3 d = Vector '[d, d, d]
