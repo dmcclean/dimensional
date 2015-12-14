@@ -104,9 +104,10 @@ instance (Real a, Fractional a, KnownDimension d) => MonoVectorSpace (Quantity d
   toMonoList x = [demoteQuantity x]
   scale s x = s * x
 
-instance (Real a, Fractional a, KnownDimension d) => MetricSpace (Quantity d a) where
+instance (Real a, Fractional a) => MetricSpace (Quantity d a) where
   type DistanceDimension (Quantity d a) = d
-  distance x y = changeRep . abs $ x ^-^ y
+  distance x y = changeRep . abs $ x - y
+  quadrance x y = changeRep $ (x - y) ^ pos2
 
 -- General purpose vectors.
 data Vector (ds :: [Dimension]) a where
@@ -157,13 +158,13 @@ instance (Real a, Fractional a, KnownDimension d, a ~ Element (Vector ds a), Mon
 
 instance (Real a, Fractional a) => MetricSpace (Vector '[d] a) where
   type DistanceDimension (Vector '[d] a) = d
-  quadrance (VCons x1 VNil) (VCons x2 VNil) = changeRep ((x1 - x2) ^ pos2)
+  quadrance (VCons x1 VNil) (VCons x2 VNil) = quadrance x1 x2
   quadrance _ _ = error "Unreachable."
 
 -- The mention of d here is necessary to prevent this instance from overlapping with the base case of Vector '[DLength] a
 instance (Real a, Fractional a, d ~ (DistanceDimension (Vector (d' ': ds) a)), MetricSpace (Vector (d' ': ds) a)) => MetricSpace (Vector (d ': d' ': ds) a) where
   type DistanceDimension (Vector (d ': d' ': ds) a) = d
-  quadrance (VCons x1 v1) (VCons x2 v2) = changeRep ((x1 - x2) ^ pos2) + quadrance v1 v2
+  quadrance (VCons x1 v1) (VCons x2 v2) = quadrance x1 x2 + quadrance v1 v2
 
 instance Show (Vector '[] a) where
   show VNil = "<| |>"
@@ -177,6 +178,8 @@ instance (Show a, Real a, Fractional a, KnownDimension d, a ~ Element (Vector ds
 length :: (VectorSpace v, MetricSpace v, Floating a) => v -> Quantity (DistanceDimension v) a
 length = distance zeroV
 
+-- | In a 'MonoVectorSpace' that is also a 'MetricSpace' with a 'DistanceDimension' of 'DOne', it's possible to
+-- 'scale' a vector by the reciprocal of it's 'length', obtaining a normalized version of the vector.
 normalize :: (MonoVectorSpace v, MetricSpace v, DOne ~ DistanceDimension v, Floating (Element v)) => v -> v
 normalize x = scale (recip . length $ x) x
 
