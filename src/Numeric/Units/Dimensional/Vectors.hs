@@ -121,9 +121,13 @@ deriving instance (Eq a) => Eq (Vector ds a)
 
 instance Storable (Vector '[] a) where
   sizeOf _ = 0
+  {-# INLINE sizeOf #-}
   alignment _ = 1
+  {-# INLINE alignment #-}
   poke _ _ = return ()
+  {-# INLINE poke #-}
   peek _ = return VNil
+  {-# INLINE peek #-}
 
 instance (Storable a, Storable (Vector ds a)) => Storable (Vector (d ': ds) a) where
   sizeOf _ = sizeOf (undefined::a) P.+ sizeOf (undefined :: Vector ds a)
