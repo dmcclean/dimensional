@@ -4,6 +4,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -16,6 +17,8 @@ where
 import Data.List (intercalate)
 import Data.Maybe
 import Data.Proxy
+import Foreign.Ptr (castPtr)
+import Foreign.Storable (Storable(..))
 import Numeric.Units.Dimensional.Prelude hiding (length)
 import Numeric.Units.Dimensional.Coercion
 import Numeric.Units.Dimensional.Dynamic hiding ((*), (^), recip)
@@ -115,6 +118,27 @@ data Vector (ds :: [Dimension]) a where
   VNil  :: Vector '[] a
 
 deriving instance (Eq a) => Eq (Vector ds a)
+
+instance Storable (Vector '[] a) where
+  sizeOf _ = 0
+  alignment _ = 1
+  poke _ _ = return ()
+  peek _ = return VNil
+
+instance (Storable a, Storable (Vector ds a)) => Storable (Vector (d ': ds) a) where
+  sizeOf _ = sizeOf (undefined::a) P.+ sizeOf (undefined :: Vector ds a)
+  {-# INLINE sizeOf #-}
+  alignment _ = alignment (undefined::a)
+  {-# INLINE alignment #-}
+  poke ptr (VCons x xs) = do
+                            poke (castPtr ptr) x
+                            pokeByteOff (castPtr ptr) (sizeOf (undefined :: a)) xs
+  {-# INLINE poke #-}
+  peek ptr = do
+               x <- peek (castPtr ptr)
+               xs <- peekByteOff (castPtr ptr) (sizeOf (undefined :: a))
+               return $ VCons x xs
+  {-# INLINE peek #-}
 
 instance VectorSpace (Vector '[] a) where
   type Dimensions (Vector '[] a) = '[]
