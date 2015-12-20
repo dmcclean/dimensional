@@ -114,7 +114,7 @@ instance (Real a, Fractional a) => MetricSpace (Quantity d a) where
 
 -- General purpose vectors.
 data Vector (ds :: [Dimension]) a where
-  VCons :: Quantity d a -> Vector ds a -> Vector (d ': ds) a
+  VCons :: !(Quantity d a) -> !(Vector ds a) -> Vector (d ': ds) a
   VNil  :: Vector '[] a
 
 deriving instance (Eq a) => Eq (Vector ds a)
