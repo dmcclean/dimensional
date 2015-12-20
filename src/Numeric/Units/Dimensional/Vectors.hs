@@ -189,6 +189,16 @@ instance (Real a, Fractional a) => MetricSpace (Vector '[d] a) where
   quadrance (VCons x1 VNil) (VCons x2 VNil) = quadrance x1 x2
   quadrance _ _ = error "Unreachable."
 
+instance AffineSpace (Vector '[] a) where
+  type Diff (Vector '[] a) = Vector '[] a
+  (.-.) = (^-^)
+  (.+^) = (^+^)
+
+instance (Real a, Fractional a, KnownDimension d, VectorSpace (Vector ds a)) => AffineSpace (Vector (d ': ds) a) where
+  type Diff (Vector (d ': ds) a) = Vector (d ': ds) a
+  (.-.) = (^-^)
+  (.+^) = (^+^)
+
 -- The mention of d here is necessary to prevent this instance from overlapping with the base case of Vector '[DLength] a
 instance (Real a, Fractional a, d ~ (DistanceDimension (Vector (d' ': ds) a)), MetricSpace (Vector (d' ': ds) a)) => MetricSpace (Vector (d ': d' ': ds) a) where
   type DistanceDimension (Vector (d ': d' ': ds) a) = d
