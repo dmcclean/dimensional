@@ -95,11 +95,7 @@ data Projection (t :: *) (a :: CoordinateSystem) (b :: CoordinateSystem) where
   RotateCircular :: (Real t, Fractional t) => PlaneAngle t -> Projection t ('CoordinateSystem a 'Circular) ('CoordinateSystem b 'Circular)
   RotatePlanar :: (Real t, Floating t) => PlaneAngle t -> Projection t ('CoordinateSystem a 'Planar) ('CoordinateSystem b 'Planar)
   RotatePolar :: (Real t, Fractional t) => PlaneAngle t -> Projection t ('CoordinateSystem a 'Polar) ('CoordinateSystem b 'Polar)
-  -- | Converts planar coordinates to polar coordinates. The resulting polar coordinate system is centered at
-  -- the origin and aligned with the positive x-axis.
   PlanarToPolar :: (RealFloat t) => Projection t ('CoordinateSystem a 'Planar) ('CoordinateSystem b 'Polar)
-  -- | Converts polar coordinates to planar coordinates. The polar coordinate system is centered at
-  -- the origin and aligned with the positive x-axis.
   PolarToPlanar :: (Floating t) => Projection t ('CoordinateSystem a 'Polar) ('CoordinateSystem b 'Planar)
 
 instance Category (Projection t) where
