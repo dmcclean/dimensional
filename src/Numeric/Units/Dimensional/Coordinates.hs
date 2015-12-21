@@ -89,22 +89,37 @@ Projection between coordinate systems
 
 data Projection (t :: *) (a :: CoordinateSystem) (b :: CoordinateSystem) where
   Identity :: (CoordinateSystemType a ~ CoordinateSystemType b) => Projection t a b
-  Opaque :: (Point a t -> Point b t) -> Projection t a b
+  Opaque :: (Point a t -> Point b t) -> Maybe (Point b t -> Point a t) -> Projection t a b
   Composed :: Projection t b c -> Projection t a b -> Projection t a c
-  Translate :: (AffineSpace (Point sys t)) => Diff (Point sys t) -> Projection t sys sys
+  Translate :: (AffineSpace (Point sys t), Offset sys t ~ Diff (Point sys t)) => Offset sys t -> Projection t sys sys
   RotateCircular :: (Real t, Fractional t) => PlaneAngle t -> Projection t ('CoordinateSystem a 'Circular) ('CoordinateSystem b 'Circular)
   RotatePlanar :: (Real t, Floating t) => PlaneAngle t -> Projection t ('CoordinateSystem a 'Planar) ('CoordinateSystem b 'Planar)
   RotatePolar :: (Real t, Fractional t) => PlaneAngle t -> Projection t ('CoordinateSystem a 'Polar) ('CoordinateSystem b 'Polar)
   PlanarToPolar :: (RealFloat t) => Projection t ('CoordinateSystem a 'Planar) ('CoordinateSystem b 'Polar)
-  PolarToPlanar :: (Floating t) => Projection t ('CoordinateSystem a 'Polar) ('CoordinateSystem b 'Planar)
+  PolarToPlanar :: (RealFloat t) => Projection t ('CoordinateSystem a 'Polar) ('CoordinateSystem b 'Planar) -- technically possible under a weaker constraint but loses invertibility
 
 instance Category (Projection t) where
   id = Identity
   (.) = Composed -- there are many opportunities for optimization here, eg merging consecutive projection matrices
 
+invert :: Projection t a b -> Maybe (Projection t b a)
+invert Identity = Just Identity
+invert (Opaque f (Just r)) = Just $ Opaque r (Just f)
+invert (Opaque _ _) = Nothing
+invert (Composed bc ab) = do
+                            cb <- invert bc
+                            ba <- invert ab
+                            return $ Composed ba cb
+invert (Translate offset)     = Just $ Translate      (negateV offset)
+invert (RotateCircular angle) = Just $ RotateCircular (negate angle)
+invert (RotatePlanar angle)   = Just $ RotatePlanar   (negate angle)
+invert (RotatePolar angle)    = Just $ RotatePolar    (negate angle)
+invert PlanarToPolar = Just PolarToPlanar
+invert PolarToPlanar = Just PlanarToPolar
+
 project :: Projection t a b -> Point a t -> Point b t
 project Identity = coerce
-project (Opaque f) = f
+project (Opaque f _) = f
 project (Composed bc ab) = project bc . project ab
 project (Translate offset) = (.+^ offset)
 project (RotateCircular theta) = coerce f
