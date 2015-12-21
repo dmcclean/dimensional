@@ -8,7 +8,17 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Numeric.Units.Dimensional.Coordinates where
+module Numeric.Units.Dimensional.Coordinates
+(
+  CoordinateType(..),
+  CoordinateSystem(..),
+  CoordinateSystemType,
+  KnownCoordinateType, canonicalize,
+  Projection(..), project, invert,
+  Point(..), Offset(..),
+  here, there, doug, centerOfEarth
+)
+where
 
 import Control.Category
 import Data.Coerce
@@ -153,9 +163,6 @@ project PolarToPlanar = coerce f
                                       in (VCons x (VCons y VNil))
     f _ = error "Unreachable" -- GHC 7.10 can't deduce that this case is not required
 
-liftPoint :: (KnownCoordinateType (CoordinateSystemType b), Floating t, Ord t) => (Vector (Representation (CoordinateSystemType a)) t -> Vector (Representation (CoordinateSystemType b)) t) -> Point a t -> Point b t
-liftPoint f (Point p) = point $ f p
-
 {-
 
 Offsets in cartesian coordinate systems form vector spaces.
@@ -225,13 +232,25 @@ instance MetricSpace (Point ('CoordinateSystem sys 'Linear)) where
   type DistanceDimension (Point ('CoordinateSystem sys 'Linear)) = DLength
   distance (Point x) (Point y) = distance x y
 
+instance MetricSpace (Offset ('CoordinateSystem sys 'Linear)) where
+  type DistanceDimension (Offset ('CoordinateSystem sys 'Linear)) = DLength
+  distance (Offset x) (Offset y) = distance x y
+
 instance MetricSpace (Point ('CoordinateSystem sys 'Planar)) where
   type DistanceDimension (Point ('CoordinateSystem sys 'Planar)) = DLength
   distance (Point x) (Point y) = distance x y
 
+instance MetricSpace (Offset ('CoordinateSystem sys 'Planar)) where
+  type DistanceDimension (Offset ('CoordinateSystem sys 'Planar)) = DLength
+  distance (Offset x) (Offset y) = distance x y
+
 instance MetricSpace (Point ('CoordinateSystem sys 'Spatial)) where
   type DistanceDimension (Point ('CoordinateSystem sys 'Spatial)) = DLength
   distance (Point x) (Point y) = distance x y
+
+instance MetricSpace (Offset ('CoordinateSystem sys 'Spatial)) where
+  type DistanceDimension (Offset ('CoordinateSystem sys 'Spatial)) = DLength
+  distance (Offset x) (Offset y) = distance x y
 
 {-
 
