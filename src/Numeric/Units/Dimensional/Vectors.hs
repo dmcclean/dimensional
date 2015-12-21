@@ -79,11 +79,11 @@ p .-^ v = p .+^ negateV v
 
 infixl 6 .-^
 
-class MetricSpace (v :: *) where
+class MetricSpace (v :: * -> *) where
   type DistanceDimension v :: Dimension
-  distance :: (Floating a) =>  v -> v -> Quantity (DistanceDimension v) a
+  distance :: (Floating a) =>  v a -> v a -> Quantity (DistanceDimension v) a
   distance x y = Quantity . P.sqrt . unQuantity $ quadrance x y -- This implementation cannot use the dimensionally typed sqrt because it can't deduce that the square root of the squared dimension is the same
-  quadrance :: (Floating a) => v -> v -> Quantity ((DistanceDimension v) ^ 'Pos2) a
+  quadrance :: (Floating a) => v a -> v a -> Quantity ((DistanceDimension v) ^ 'Pos2) a
   quadrance x y = d ^ pos2
     where
       d = distance x y
@@ -107,10 +107,10 @@ instance (Real a, Fractional a, KnownDimension d) => MonoVectorSpace (Quantity d
   toMonoList x = [demoteQuantity x]
   scale s x = s * x
 
-instance (Real a, Fractional a) => MetricSpace (Quantity d a) where
-  type DistanceDimension (Quantity d a) = d
-  distance x y = changeRep . abs $ x - y
-  quadrance x y = changeRep $ (x - y) ^ pos2
+instance MetricSpace (Quantity d) where
+  type DistanceDimension (Quantity d) = d
+  distance x y = abs $ x - y
+  quadrance x y = (x - y) ^ pos2
 
 -- General purpose vectors.
 data Vector (ds :: [Dimension]) a where
@@ -184,8 +184,8 @@ instance (Real a, Fractional a, KnownDimension d, a ~ Element (Vector ds a), Mon
   toMonoList (VCons x v) = (demoteQuantity x) : toMonoList v
   scale s (VCons x v) = VCons (scale s x) (scale s v)
 
-instance (Real a, Fractional a) => MetricSpace (Vector '[d] a) where
-  type DistanceDimension (Vector '[d] a) = d
+instance MetricSpace (Vector '[d]) where
+  type DistanceDimension (Vector '[d]) = d
   quadrance (VCons x1 VNil) (VCons x2 VNil) = quadrance x1 x2
   quadrance _ _ = error "Unreachable."
 
@@ -200,8 +200,8 @@ instance (Real a, Fractional a, KnownDimension d, VectorSpace (Vector ds a)) => 
   (.+^) = (^+^)
 
 -- The mention of d here is necessary to prevent this instance from overlapping with the base case of Vector '[DLength] a
-instance (Real a, Fractional a, d ~ (DistanceDimension (Vector (d' ': ds) a)), MetricSpace (Vector (d' ': ds) a)) => MetricSpace (Vector (d ': d' ': ds) a) where
-  type DistanceDimension (Vector (d ': d' ': ds) a) = d
+instance (d ~ (DistanceDimension (Vector (d' ': ds))), MetricSpace (Vector (d' ': ds))) => MetricSpace (Vector (d ': d' ': ds)) where
+  type DistanceDimension (Vector (d ': d' ': ds)) = d
   quadrance (VCons x1 v1) (VCons x2 v2) = quadrance x1 x2 + quadrance v1 v2
 
 instance Show (Vector '[] a) where
@@ -213,12 +213,12 @@ instance (Show a, Real a, Fractional a, KnownDimension d, a ~ Element (Vector ds
       elems = intercalate ", " . fmap show . toMonoList
 
 -- | In a 'MetricSpace' that is also a 'VectorSpace' the 'length' of a vector is its 'distance' from the zero vector, 'zeroV'.
-length :: (VectorSpace v, MetricSpace v, Floating a) => v -> Quantity (DistanceDimension v) a
+length :: (VectorSpace (v a), MetricSpace v, Floating a) => v a -> Quantity (DistanceDimension v) a
 length = distance zeroV
 
 -- | In a 'MonoVectorSpace' that is also a 'MetricSpace' with a 'DistanceDimension' of 'DOne', it's possible to
 -- 'scale' a vector by the reciprocal of it's 'length', obtaining a normalized version of the vector.
-normalize :: (MonoVectorSpace v, MetricSpace v, DOne ~ DistanceDimension v, Floating (Element v)) => v -> v
+normalize :: (MonoVectorSpace (v a), MetricSpace v, DOne ~ DistanceDimension v, a ~ Element (v a), Floating a) => v a -> v a
 normalize x = scale (recip . length $ x) x
 
 type V2 d = Vector '[d, d]
@@ -226,11 +226,11 @@ type V3 d = Vector '[d, d, d]
 type V4 d = Vector '[d, d, d, d]
 
 -- Torsors, by pretending to forget the origin and thus the ability to scale.
-newtype Torsor v = Torsor v
+newtype Torsor v a = Torsor (v a)
   deriving (Eq, Ord)
 
-instance (VectorSpace v) => AffineSpace (Torsor v) where
-  type Diff (Torsor v) = v
+instance (VectorSpace (v a)) => AffineSpace (Torsor v a) where
+  type Diff (Torsor v a) = v a
   (Torsor p1) .-. (Torsor p2) = p1 ^-^ p2
   (Torsor p) .+^ x = Torsor $ p ^+^ x
 
