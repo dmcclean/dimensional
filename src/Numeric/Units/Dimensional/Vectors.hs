@@ -26,6 +26,10 @@ import Numeric.NumType.DK.Integers
   ( TypeInt (Pos2) )
 import qualified Prelude as P
 
+type family MapMul (d :: Dimension) (ds :: [Dimension]) :: [Dimension] where
+  MapMul d' '[] = '[]
+  MapMul d' (d ': ds) = (d' * d) ': (MapMul d' ds)
+
 class VectorSpace (v :: *) where
   type Dimensions v :: [Dimension]
   fromList :: Real b => [AnyQuantity b] -> Maybe v
@@ -36,6 +40,8 @@ class VectorSpace (v :: *) where
   negateV x = zeroV ^-^ x
   (^-^) :: v -> v -> v
   x ^-^ y = x ^+^ negateV y
+  asVector :: forall a.(Real a, Fractional a, VectorSpace (Vector (Dimensions v) a)) => v -> Vector (Dimensions v) a
+  asVector = fromJust . fromList . (toList :: v -> [AnyQuantity a])
   {-# MINIMAL fromList, toList, zeroV, (^+^), (negateV | (^-^)) #-}
 
 infixl 6 ^+^, ^-^
@@ -48,6 +54,10 @@ class (VectorSpace v) => MonoVectorSpace (v :: *) where
   scale :: Scalar v -> v -> v
 
 type Scalar v = Dimensionless (Element v)
+
+gscale :: (Num a) => Quantity d a -> Vector ds a -> Vector (MapMul d ds) a
+gscale x (VCons y v) = VCons (x * y) (gscale x v)
+gscale _ VNil = VNil
 
 infixr 7 ^/
 (^/) :: (MonoVectorSpace v, Fractional (Element v)) => v -> Scalar v -> v
@@ -220,6 +230,10 @@ length = distance zeroV
 -- 'scale' a vector by the reciprocal of it's 'length', obtaining a normalized version of the vector.
 normalize :: (MonoVectorSpace (v a), MetricSpace v, DOne ~ DistanceDimension v, a ~ Element (v a), Floating a) => v a -> v a
 normalize x = scale (recip . length $ x) x
+
+-- | Converts a vector in a metric space (therefore, one with homogenous dimensions) into a direction vector.
+direction :: (VectorSpace (v a), MetricSpace v, Real a, Floating a, VectorSpace (Vector (Dimensions (v a)) a)) => v a -> UnitV (Vector (MapMul (Recip (DistanceDimension v)) (Dimensions (v a)))) a
+direction v = UnitV . gscale (recip . length $ v) . asVector $ v
 
 type V2 d = Vector '[d, d]
 type V3 d = Vector '[d, d, d]
