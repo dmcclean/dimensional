@@ -20,11 +20,10 @@ module Numeric.Units.Dimensional.Coordinates
 )
 where
 
-import Control.Category
 import Data.Coerce
 import Data.Proxy
 import GHC.TypeLits (Symbol, KnownSymbol, symbolVal)
-import Numeric.Units.Dimensional.Prelude hiding ((.), id)
+import Numeric.Units.Dimensional.Prelude
 import Numeric.Units.Dimensional.Vectors hiding (direction)
 import qualified Numeric.Units.Dimensional.Vectors as V
 import Unsafe.Coerce
