@@ -1,5 +1,7 @@
 vNext
 -----
+* Breaking: Dropped support for GHC 7.8 due to issues with coercion of GADTs
+  required by the Vectors module.
 * Breaking: Changed Numeric.Units.Dimensional.Prelude to export a dimensionally
   typed `recip` instead of the one from `Prelude`.
 * Breaking: Changed Numeric.Units.Dimensional.Prelude to export `(.)` and `id`
