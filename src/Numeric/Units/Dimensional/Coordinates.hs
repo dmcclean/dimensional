@@ -15,7 +15,7 @@ module Numeric.Units.Dimensional.Coordinates
   CoordinateSystemType,
   KnownCoordinateType, canonicalize,
   Projection(..), project, invert,
-  Point(..), Offset(..),
+  Point(..), Offset(..), Direction, direction, unDirection, offsetBy,
   here, there, doug, centerOfEarth
 )
 where
@@ -25,7 +25,9 @@ import Data.Coerce
 import Data.Proxy
 import GHC.TypeLits (Symbol, KnownSymbol, symbolVal)
 import Numeric.Units.Dimensional.Prelude hiding ((.), id, length)
-import Numeric.Units.Dimensional.Vectors
+import Numeric.Units.Dimensional.Vectors hiding (direction)
+import qualified Numeric.Units.Dimensional.Vectors as V
+import Unsafe.Coerce
 
 data CoordinateType = Linear | Circular | Planar | Polar | Spherical | Cylindrical | Spatial -- what to name the 3D cartesian one is unclear
 
@@ -77,11 +79,16 @@ type family CoordinateSystemType (sys :: CoordinateSystem) :: CoordinateType whe
   CoordinateSystemType ('CoordinateSystem sys ty) = ty
 
 newtype Point (sys :: CoordinateSystem) a = Point (Vector (Representation (CoordinateSystemType sys)) a)
+  deriving (Eq)
 
 point :: forall sys a.(KnownCoordinateType (CoordinateSystemType sys), Ord a, Floating a) => Vector (Representation (CoordinateSystemType sys)) a -> Point sys a
 point = Point . (canonicalize (Proxy :: Proxy (CoordinateSystemType sys)))
 
 newtype Offset (sys :: CoordinateSystem) a = Offset (Vector (Representation (CoordinateSystemType sys)) a)
+  deriving (Eq)
+
+newtype Direction (sys :: CoordinateSystem) a = Direction { unDirection :: DirectionVector (Offset sys) a }
+  deriving (Eq)
 
 type ECEF = 'CoordinateSystem "ECEF" 'Spatial
 
@@ -90,6 +97,13 @@ here = point $ VCons (3 *~ meter) (VCons (-12 *~ meter) (VCons (7 *~ meter) VNil
 there = point $ VCons (19.4 *~ meter) (VCons (171.9 *~ meter) (VCons (-41.6 *~ meter) VNil))
 doug = point $ VCons (1557.123 *~ kilo meter) (VCons (-4471.044 *~ kilo meter) (VCons (4259.591 *~ kilo meter) VNil))
 centerOfEarth = point zeroV
+
+direction :: (Real a, Floating a, MetricSpace (Offset sys), VectorSpace (Offset sys a), VectorSpace (Vector (Dimensions (Offset sys a)) a)) => Offset sys a -> Direction sys a
+direction o = Direction (V.direction o)
+
+offsetBy :: (Num a) => Direction sys a -> Length a -> Offset sys a
+offsetBy dir dist = Offset . unsafeCoerce . gscale dist . unUnitV . unDirection $ dir
+  -- this unsafeCoerce wouldn't be necessary if we could have appropriate role signatures in the definition of Dimensional
 
 {-
 
@@ -254,7 +268,7 @@ instance MetricSpace (Offset ('CoordinateSystem sys 'Spatial)) where
 
 {-
 
-Show instances for points and offsets.
+Show instances for points, offsets, and directions.
 These are split out by Representation to avoid a complicated constraint that amounts to all the dimensions being known.
 
 -}
@@ -288,3 +302,12 @@ instance (Fractional a, Real a, Show a, KnownSymbol sys) => Show (Offset ('Coord
 
 instance (Fractional a, Real a, Show a, KnownSymbol sys) => Show (Offset ('CoordinateSystem sys 'Spatial) a) where
   show (Offset v) = symbolVal (Proxy :: Proxy sys) ++ " Offset: " ++ show v
+
+instance (Fractional a, Real a, Show a, KnownSymbol sys) => Show (Direction ('CoordinateSystem sys 'Linear) a) where
+  show (Direction v) = symbolVal (Proxy :: Proxy sys) ++ " Direction: " ++ show v
+
+instance (Fractional a, Real a, Show a, KnownSymbol sys) => Show (Direction ('CoordinateSystem sys 'Planar) a) where
+  show (Direction v) = symbolVal (Proxy :: Proxy sys) ++ " Direction: " ++ show v
+
+instance (Fractional a, Real a, Show a, KnownSymbol sys) => Show (Direction ('CoordinateSystem sys 'Spatial) a) where
+  show (Direction v) = symbolVal (Proxy :: Proxy sys) ++ " Direction: " ++ show v

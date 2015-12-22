@@ -231,8 +231,10 @@ length = distance zeroV
 normalize :: (MonoVectorSpace (v a), MetricSpace v, DOne ~ DistanceDimension v, a ~ Element (v a), Floating a) => v a -> v a
 normalize x = scale (recip . length $ x) x
 
+type DirectionVector v a = UnitV (Vector (MapMul (Recip (DistanceDimension v)) (Dimensions (v a)))) a
+
 -- | Converts a vector in a metric space (therefore, one with homogenous dimensions) into a direction vector.
-direction :: (VectorSpace (v a), MetricSpace v, Real a, Floating a, VectorSpace (Vector (Dimensions (v a)) a)) => v a -> UnitV (Vector (MapMul (Recip (DistanceDimension v)) (Dimensions (v a)))) a
+direction :: (VectorSpace (v a), MetricSpace v, Real a, Floating a, VectorSpace (Vector (Dimensions (v a)) a)) => v a -> DirectionVector v a
 direction v = UnitV . gscale (recip . length $ v) . asVector $ v
 
 type V2 d = Vector '[d, d]
