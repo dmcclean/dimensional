@@ -237,3 +237,12 @@ instance (VectorSpace (v a)) => AffineSpace (Torsor v a) where
 instance (MetricSpace v) => MetricSpace (Torsor v) where
   type DistanceDimension (Torsor v) = DistanceDimension v
   distance (Torsor x) (Torsor y) = distance x y
+
+newtype UnitV v a = UnitV { unUnitV :: (v a) }
+  deriving (Eq)
+
+instance Show (v a) => Show (UnitV v a) where
+  show = show . unUnitV
+
+unitV :: (MonoVectorSpace (v a), MetricSpace v, DOne ~ DistanceDimension v, a ~ Element (v a), Floating a) => v a -> UnitV v a
+unitV = UnitV . normalize
