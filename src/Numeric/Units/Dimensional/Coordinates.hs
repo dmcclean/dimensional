@@ -24,7 +24,7 @@ import Control.Category
 import Data.Coerce
 import Data.Proxy
 import GHC.TypeLits (Symbol, KnownSymbol, symbolVal)
-import Numeric.Units.Dimensional.Prelude hiding ((.), id, length)
+import Numeric.Units.Dimensional.Prelude hiding ((.), id)
 import Numeric.Units.Dimensional.Vectors hiding (direction)
 import qualified Numeric.Units.Dimensional.Vectors as V
 import Unsafe.Coerce
@@ -165,7 +165,7 @@ project (RotatePolar theta) = coerce f
 project PlanarToPolar = coerce f
   where
     f :: (RealFloat a) => Vector '[DLength, DLength] a -> Vector '[DLength, DPlaneAngle] a
-    f p@(VCons x (VCons y VNil)) = let r = length p
+    f p@(VCons x (VCons y VNil)) = let r = lengthV p
                                        theta = atan2 y x
                                     in (VCons r (VCons theta VNil))
     f _ = error "Unreachable" -- GHC 7.10 can't deduce that this case is not required

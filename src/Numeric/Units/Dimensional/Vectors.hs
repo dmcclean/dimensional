@@ -19,7 +19,7 @@ import Data.Maybe
 import Data.Proxy
 import Foreign.Ptr (castPtr)
 import Foreign.Storable (Storable(..))
-import Numeric.Units.Dimensional.Prelude hiding (length)
+import Numeric.Units.Dimensional.Prelude
 import Numeric.Units.Dimensional.Coercion
 import Numeric.Units.Dimensional.Dynamic hiding ((*), (^), recip)
 import Numeric.NumType.DK.Integers
@@ -222,20 +222,20 @@ instance (Show a, Real a, Fractional a, KnownDimension d, a ~ Element (Vector ds
     where
       elems = intercalate ", " . fmap show . toMonoList
 
--- | In a 'MetricSpace' that is also a 'VectorSpace' the 'length' of a vector is its 'distance' from the zero vector, 'zeroV'.
-length :: (VectorSpace (v a), MetricSpace v, Floating a) => v a -> Quantity (DistanceDimension v) a
-length = distance zeroV
+-- | In a 'MetricSpace' that is also a 'VectorSpace' the 'lengthV' of a vector is its 'distance' from the zero vector, 'zeroV'.
+lengthV :: (VectorSpace (v a), MetricSpace v, Floating a) => v a -> Quantity (DistanceDimension v) a
+lengthV = distance zeroV
 
 -- | In a 'MonoVectorSpace' that is also a 'MetricSpace' with a 'DistanceDimension' of 'DOne', it's possible to
 -- 'scale' a vector by the reciprocal of it's 'length', obtaining a normalized version of the vector.
 normalize :: (MonoVectorSpace (v a), MetricSpace v, DOne ~ DistanceDimension v, a ~ Element (v a), Floating a) => v a -> v a
-normalize x = scale (recip . length $ x) x
+normalize x = scale (recip . lengthV $ x) x
 
 type DirectionVector v a = UnitV (Vector (MapMul (Recip (DistanceDimension v)) (Dimensions (v a)))) a
 
 -- | Converts a vector in a metric space (therefore, one with homogenous dimensions) into a direction vector.
 direction :: (VectorSpace (v a), MetricSpace v, Real a, Floating a, VectorSpace (Vector (Dimensions (v a)) a)) => v a -> DirectionVector v a
-direction v = UnitV . gscale (recip . length $ v) . asVector $ v
+direction v = UnitV . gscale (recip . lengthV $ v) . asVector $ v
 
 type V2 d = Vector '[d, d]
 type V3 d = Vector '[d, d, d]
