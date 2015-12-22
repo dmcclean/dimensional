@@ -28,13 +28,12 @@ import Numeric.Units.Dimensional.Vectors hiding (direction)
 import qualified Numeric.Units.Dimensional.Vectors as V
 import Unsafe.Coerce
 
-data CoordinateType = Linear | Circular | Planar | Polar | Spherical | Cylindrical | Spatial -- what to name the 3D cartesian one is unclear
+data CoordinateType = Linear | Planar | Polar | Spherical | Cylindrical | Spatial -- what to name the 3D cartesian one is unclear
 
 data CoordinateSystem = CoordinateSystem Symbol CoordinateType
 
 type family Representation (t :: CoordinateType) :: [Dimension] where
   Representation 'Linear = '[DLength]
-  Representation 'Circular = '[DPlaneAngle]
   Representation 'Planar = '[DLength, DLength]
   Representation 'Polar = '[DLength, DPlaneAngle]
   Representation 'Spherical = '[DLength, DPlaneAngle, DPlaneAngle]
@@ -46,10 +45,6 @@ class KnownCoordinateType (ty :: CoordinateType) where
 
 instance KnownCoordinateType 'Linear where
   canonicalize _ = id
-
-instance KnownCoordinateType 'Circular where
-  canonicalize _ (VCons theta VNil) = VCons (singleTurnAngle theta) VNil
-  canonicalize _ x = x -- GHC 7.10 can't realize that this case is unreachable
 
 instance KnownCoordinateType 'Planar where
   canonicalize _ = id
@@ -115,7 +110,6 @@ data Projection (t :: *) (a :: CoordinateSystem) (b :: CoordinateSystem) where
   Opaque :: (Point a t -> Point b t) -> Maybe (Point b t -> Point a t) -> Projection t a b
   Composed :: Projection t b c -> Projection t a b -> Projection t a c
   Translate :: (AffineSpace (Point sys t), Offset sys t ~ Diff (Point sys t)) => Offset sys t -> Projection t sys sys
-  RotateCircular :: (Real t, Fractional t) => PlaneAngle t -> Projection t ('CoordinateSystem a 'Circular) ('CoordinateSystem b 'Circular)
   RotatePlanar :: (Real t, Floating t) => PlaneAngle t -> Projection t ('CoordinateSystem a 'Planar) ('CoordinateSystem b 'Planar)
   RotatePolar :: (Real t, Fractional t) => PlaneAngle t -> Projection t ('CoordinateSystem a 'Polar) ('CoordinateSystem b 'Polar)
   PlanarToPolar :: (RealFloat t) => Projection t ('CoordinateSystem a 'Planar) ('CoordinateSystem b 'Polar)
@@ -134,7 +128,6 @@ invert (Composed bc ab) = do
                             ba <- invert ab
                             return $ Composed ba cb
 invert (Translate offset)     = Just $ Translate      (negateV offset)
-invert (RotateCircular angle) = Just $ RotateCircular (negate angle)
 invert (RotatePlanar angle)   = Just $ RotatePlanar   (negate angle)
 invert (RotatePolar angle)    = Just $ RotatePolar    (negate angle)
 invert PlanarToPolar = Just PolarToPlanar
@@ -145,9 +138,6 @@ project Identity = coerce
 project (Opaque f _) = f
 project (Composed bc ab) = project bc . project ab
 project (Translate offset) = (.+^ offset)
-project (RotateCircular theta) = coerce f
-  where
-    f = (^+^ (VCons theta VNil))
 project (RotatePlanar theta) = coerce f
   where
     f (VCons x (VCons y VNil)) = VCons x' (VCons y' VNil)
@@ -273,9 +263,6 @@ These are split out by Representation to avoid a complicated constraint that amo
 -}
 
 instance (Fractional a, Real a, Show a, KnownSymbol sys) => Show (Point ('CoordinateSystem sys 'Linear) a) where
-  show (Point v) = symbolVal (Proxy :: Proxy sys) ++ " Point: " ++ show v
-
-instance (Fractional a, Real a, Show a, KnownSymbol sys) => Show (Point ('CoordinateSystem sys 'Circular) a) where
   show (Point v) = symbolVal (Proxy :: Proxy sys) ++ " Point: " ++ show v
 
 instance (Fractional a, Real a, Show a, KnownSymbol sys) => Show (Point ('CoordinateSystem sys 'Planar) a) where
