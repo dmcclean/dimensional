@@ -28,7 +28,12 @@ import Numeric.Units.Dimensional.Vectors hiding (direction)
 import qualified Numeric.Units.Dimensional.Vectors as V
 import Unsafe.Coerce
 
-data CoordinateType = Linear | Planar | Polar | Spherical | Cylindrical | Spatial -- what to name the 3D cartesian one is unclear
+data CoordinateType = Linear
+                    | Planar
+                    | Polar
+                    | Spherical
+                    | Cylindrical
+                    | Spatial -- what to name the 3D cartesian one is unclear
 
 data CoordinateSystem = CoordinateSystem Symbol CoordinateType
 
