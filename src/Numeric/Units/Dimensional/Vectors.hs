@@ -288,6 +288,21 @@ instance (AffineSpace v1, AffineSpace v2) => AffineSpace (Augmented v1 v2) where
   (Augmented x1 y1) .-. (Augmented x2 y2) = Augmented (x1 .-. x2) (y1 .-. y2)
   (Augmented x y) .+^ (Augmented dx dy) = Augmented (x .+^ dx) (y .+^ dy)
 
+instance (Storable v1, Storable v2) => Storable (Augmented v1 v2) where
+  sizeOf _ = sizeOf (undefined :: v1) P.+ sizeOf (undefined :: v2)
+  {-# INLINE sizeOf #-}
+  alignment _ = max (alignment (undefined :: v1)) (alignment (undefined :: v2))
+  {-# INLINE alignment #-}
+  poke p (Augmented v1 v2) = do
+                               poke (castPtr p) v1
+                               pokeByteOff p (sizeOf v1) v2
+  {-# INLINE poke #-}
+  peek p = do
+             v1 <- peek (castPtr p)
+             v2 <- peekByteOff p (sizeOf v1)
+             return $ Augmented v1 v2
+  {-# INLINE peek #-}
+
 instance (VectorSpace (v1 a), VectorSpace (v2 a)) => VectorSpace (AugmentedMono v1 v2 a) where
   type Dimensions (AugmentedMono v1 v2 a) = Concat (Dimensions (v1 a)) (Dimensions (v2 a))
   fromListWithLeftovers xs = (liftA2 AugmentedMono v1 v2, xs'')
@@ -316,6 +331,21 @@ instance (AffineSpace (v1 a), AffineSpace (v2 a)) => AffineSpace (AugmentedMono 
 instance (MetricSpace v1, MetricSpace v2, DistanceDimension v1 ~ DistanceDimension v2) => MetricSpace (AugmentedMono v1 v2) where
   type DistanceDimension (AugmentedMono v1 v2) = DistanceDimension v1
   quadrance (AugmentedMono x1 y1) (AugmentedMono x2 y2) = quadrance x1 x2 + quadrance y1 y2
+
+instance (Storable (v1 a), Storable (v2 a)) => Storable (AugmentedMono v1 v2 a) where
+  sizeOf _ = sizeOf (undefined :: v1 a) P.+ sizeOf (undefined :: v2 a)
+  {-# INLINE sizeOf #-}
+  alignment _ = max (alignment (undefined :: v1 a)) (alignment (undefined :: v2 a))
+  {-# INLINE alignment #-}
+  poke p (AugmentedMono v1 v2) = do
+                               poke (castPtr p) v1
+                               pokeByteOff p (sizeOf v1) v2
+  {-# INLINE poke #-}
+  peek p = do
+             v1 <- peek (castPtr p)
+             v2 <- peekByteOff p (sizeOf v1)
+             return $ AugmentedMono v1 v2
+  {-# INLINE peek #-}
 
 instance (Show v1, Show v2) => Show (Augmented v1 v2) where
   show (Augmented v1 v2) = "(" ++ show v1 ++ ", " ++ show v2 ++ ")"
