@@ -10,10 +10,12 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE UndecidableInstances #-} -- for nested application of Concat
 
 module Numeric.Units.Dimensional.Vectors
 where
 
+import Control.Applicative
 import Data.List (intercalate)
 import Data.Maybe
 import Data.Proxy
@@ -30,9 +32,13 @@ type family MapMul (d :: Dimension) (ds :: [Dimension]) :: [Dimension] where
   MapMul d' '[] = '[]
   MapMul d' (d ': ds) = (d' * d) ': (MapMul d' ds)
 
+type family Concat (xs :: [k]) (ys :: [k]) :: [k] where
+  Concat '[]       ys = ys
+  Concat (x ': xs) ys = x ': (Concat xs ys)
+
 class VectorSpace (v :: *) where
   type Dimensions v :: [Dimension]
-  fromList :: Real b => [AnyQuantity b] -> Maybe v
+  fromListWithLeftovers :: Real b => [AnyQuantity b] -> (Maybe v, [AnyQuantity b])
   toList :: Fractional a => v -> [AnyQuantity a]
   zeroV :: v
   (^+^) :: v -> v -> v
@@ -42,16 +48,24 @@ class VectorSpace (v :: *) where
   x ^-^ y = x ^+^ negateV y
   asVector :: forall a.(Real a, Fractional a, VectorSpace (Vector (Dimensions v) a)) => v -> Vector (Dimensions v) a
   asVector = fromJust . fromList . (toList :: v -> [AnyQuantity a])
-  {-# MINIMAL fromList, toList, zeroV, (^+^), (negateV | (^-^)) #-}
+  {-# MINIMAL fromListWithLeftovers, toList, zeroV, (^+^), (negateV | (^-^)) #-}
 
 infixl 6 ^+^, ^-^
+
+fromList :: (VectorSpace v, Real b) => [AnyQuantity b] -> Maybe v
+fromList xs | (result, []) <- fromListWithLeftovers xs = result
+            | otherwise = Nothing
 
 -- scale really shouldn't be here, because this might be an affine type
 class (VectorSpace v) => MonoVectorSpace (v :: *) where
   type Element v :: *
-  fromMonoList :: [AnyQuantity (Element v)] -> Maybe v
+  fromMonoListWithLeftovers :: [AnyQuantity (Element v)] -> (Maybe v, [AnyQuantity (Element v)])
   toMonoList :: v -> [AnyQuantity (Element v)]
   scale :: Scalar v -> v -> v
+
+fromMonoList :: (MonoVectorSpace v) => [AnyQuantity (Element v)] -> Maybe v
+fromMonoList xs | (result, []) <- fromMonoListWithLeftovers xs = result
+                | otherwise = Nothing
 
 type Scalar v = Dimensionless (Element v)
 
@@ -102,8 +116,8 @@ class MetricSpace (v :: * -> *) where
 -- Individual quantities can be viewed as single element vectors
 instance (Real a, Fractional a, KnownDimension d) => VectorSpace (Quantity d a) where
   type Dimensions (Quantity d a) = '[d]
-  fromList [x] = fmap changeRep . promoteQuantity $ x
-  fromList _   = Nothing
+  fromListWithLeftovers (x : xs) = (fmap changeRep . promoteQuantity $ x, xs)
+  fromListWithLeftovers [] = (Nothing, [])
   toList x = [demoteQuantity . changeRep $ x]
   zeroV = _0
   (^+^) = (+)
@@ -112,10 +126,15 @@ instance (Real a, Fractional a, KnownDimension d) => VectorSpace (Quantity d a) 
 
 instance (Real a, Fractional a, KnownDimension d) => MonoVectorSpace (Quantity d a) where
   type Element (Quantity d a) = a
-  fromMonoList [x] = promoteQuantity x
-  fromMonoList _ = Nothing
+  fromMonoListWithLeftovers (x : xs) = (promoteQuantity x, xs)
+  fromMonoListWithLeftovers [] = (Nothing, [])
   toMonoList x = [demoteQuantity x]
   scale s x = s * x
+
+instance (Real a, Fractional a, KnownDimension d) => AffineSpace (Quantity d a) where
+  type Diff (Quantity d a) = Quantity d a
+  (.-.) = (-)
+  (.+^) = (+)
 
 instance MetricSpace (Quantity d) where
   type DistanceDimension (Quantity d) = d
@@ -156,8 +175,7 @@ instance (Storable a, Storable (Vector ds a)) => Storable (Vector (d ': ds) a) w
 
 instance VectorSpace (Vector '[] a) where
   type Dimensions (Vector '[] a) = '[]
-  fromList [] = Just VNil
-  fromList _  = Nothing
+  fromListWithLeftovers xs = (Just VNil, xs)
   toList VNil = []
   zeroV = VNil
   _ ^+^ _ = VNil
@@ -166,11 +184,11 @@ instance VectorSpace (Vector '[] a) where
 
 instance (Real a, Fractional a, KnownDimension d, VectorSpace (Vector ds a)) => VectorSpace (Vector (d ': ds) a) where
   type Dimensions (Vector (d ': ds) a) = d ': ds
-  fromList (x : xs) = do
-                        x' <- fmap changeRep . promoteQuantity $ x
-                        xs' <- fromList xs
-                        return $ VCons x' xs'
-  fromList _ = Nothing
+  fromListWithLeftovers (x : xs) = (liftA2 VCons x' xs', left)
+    where
+      x' = fmap changeRep . promoteQuantity $ x
+      (xs', left) = fromListWithLeftovers xs
+  fromListWithLeftovers [] = (Nothing, [])
   toList (VCons x v) = (demoteQuantity . changeRep $ x) : toList v
   zeroV = VCons zeroV zeroV
   (VCons x1 v1) ^+^ (VCons x2 v2) = VCons (x1 ^+^ x2) (v1 ^+^ v2)
@@ -179,18 +197,17 @@ instance (Real a, Fractional a, KnownDimension d, VectorSpace (Vector ds a)) => 
 
 instance MonoVectorSpace (Vector '[] a) where
   type Element (Vector '[] a) = a
-  fromMonoList [] = Just VNil
-  fromMonoList _  = Nothing
+  fromMonoListWithLeftovers xs = (Just VNil, xs)
   toMonoList VNil = []
   scale _ _ = VNil
 
 instance (Real a, Fractional a, KnownDimension d, a ~ Element (Vector ds a), MonoVectorSpace (Vector ds a)) => MonoVectorSpace (Vector (d ': ds) a) where
   type Element (Vector (d ': ds) a) = a
-  fromMonoList (x : xs) = do
-                            x' <- promoteQuantity x
-                            xs' <- fromMonoList xs
-                            return $ VCons x' xs'
-  fromMonoList _ = Nothing
+  fromMonoListWithLeftovers (x : xs) = (liftA2 VCons x' xs', left)
+    where
+      x' = promoteQuantity x
+      (xs', left) = fromMonoListWithLeftovers xs
+  fromMonoListWithLeftovers [] = (Nothing, [])
   toMonoList (VCons x v) = (demoteQuantity x) : toMonoList v
   scale s (VCons x v) = VCons (scale s x) (scale s v)
 
@@ -240,6 +257,71 @@ direction v = UnitV . gscale (recip . lengthV $ v) . asVector $ v
 type V2 d = Vector '[d, d]
 type V3 d = Vector '[d, d, d]
 type V4 d = Vector '[d, d, d, d]
+
+-- Augmented Vectors
+data Augmented (v1 :: *) (v2 :: *) = Augmented v1 v2
+
+data AugmentedMono (v1 :: * -> *) (v2 :: * -> *) a = AugmentedMono (v1 a) (v2 a)
+
+instance (VectorSpace v1, VectorSpace v2) => VectorSpace (Augmented v1 v2) where
+  type Dimensions (Augmented v1 v2) = Concat (Dimensions v1) (Dimensions v2)
+  fromListWithLeftovers xs = (liftA2 Augmented v1 v2, xs'')
+    where
+      (v1, xs') = fromListWithLeftovers xs
+      (v2, xs'') = fromListWithLeftovers xs'
+  toList (Augmented v1 v2) = toList v1 ++ toList v2
+  zeroV = Augmented zeroV zeroV
+  (Augmented x1 y1) ^+^ (Augmented x2 y2) = Augmented (x1 ^+^ x2) (y1 ^+^ y2)
+  negateV (Augmented v1 v2) = Augmented (negateV v1) (negateV v2)
+
+instance (MonoVectorSpace v1, MonoVectorSpace v2, Element v1 ~ Element v2) => MonoVectorSpace (Augmented v1 v2) where
+  type Element (Augmented v1 v2) = Element v1
+  fromMonoListWithLeftovers xs = (liftA2 Augmented v1 v2, xs'')
+    where
+      (v1, xs') = fromMonoListWithLeftovers xs
+      (v2, xs'') = fromMonoListWithLeftovers xs'
+  toMonoList (Augmented v1 v2) = toMonoList v1 ++ toMonoList v2
+  scale s (Augmented v1 v2) = Augmented (scale s v1) (scale s v2)
+
+instance (AffineSpace v1, AffineSpace v2) => AffineSpace (Augmented v1 v2) where
+  type Diff (Augmented v1 v2) = Augmented (Diff v1) (Diff v2)
+  (Augmented x1 y1) .-. (Augmented x2 y2) = Augmented (x1 .-. x2) (y1 .-. y2)
+  (Augmented x y) .+^ (Augmented dx dy) = Augmented (x .+^ dx) (y .+^ dy)
+
+instance (VectorSpace (v1 a), VectorSpace (v2 a)) => VectorSpace (AugmentedMono v1 v2 a) where
+  type Dimensions (AugmentedMono v1 v2 a) = Concat (Dimensions (v1 a)) (Dimensions (v2 a))
+  fromListWithLeftovers xs = (liftA2 AugmentedMono v1 v2, xs'')
+    where
+      (v1, xs') = fromListWithLeftovers xs
+      (v2, xs'') = fromListWithLeftovers xs'
+  toList (AugmentedMono v1 v2) = toList v1 ++ toList v2
+  zeroV = (AugmentedMono zeroV zeroV)
+  (AugmentedMono x1 y1) ^+^ (AugmentedMono x2 y2) = AugmentedMono (x1 ^+^ x2) (y1 ^+^ y2)
+  negateV (AugmentedMono v1 v2) = AugmentedMono (negateV v1) (negateV v2)
+
+instance (MonoVectorSpace (v1 a), MonoVectorSpace (v2 a), Element (v1 a) ~ Element (v2 a)) => MonoVectorSpace (AugmentedMono v1 v2 a) where
+  type Element (AugmentedMono v1 v2 a) = Element (v1 a)
+  fromMonoListWithLeftovers xs = (liftA2 AugmentedMono v1 v2, xs'')
+    where
+      (v1, xs') = fromMonoListWithLeftovers xs
+      (v2, xs'') = fromMonoListWithLeftovers xs'
+  toMonoList (AugmentedMono v1 v2) = toMonoList v1 ++ toMonoList v2
+  scale s (AugmentedMono v1 v2) = AugmentedMono (scale s v1) (scale s v2)
+
+instance (AffineSpace (v1 a), AffineSpace (v2 a)) => AffineSpace (AugmentedMono v1 v2 a) where
+  type Diff (AugmentedMono v1 v2 a) = Augmented (Diff (v1 a)) (Diff (v2 a))
+  (AugmentedMono x1 y1) .-. (AugmentedMono x2 y2) = Augmented (x1 .-. x2) (y1 .-. y2)
+  (AugmentedMono x y) .+^ (Augmented dx dy) = AugmentedMono (x .+^ dx) (y .+^ dy)
+
+instance (MetricSpace v1, MetricSpace v2, DistanceDimension v1 ~ DistanceDimension v2) => MetricSpace (AugmentedMono v1 v2) where
+  type DistanceDimension (AugmentedMono v1 v2) = DistanceDimension v1
+  quadrance (AugmentedMono x1 y1) (AugmentedMono x2 y2) = quadrance x1 x2 + quadrance y1 y2
+
+instance (Show v1, Show v2) => Show (Augmented v1 v2) where
+  show (Augmented v1 v2) = "(" ++ show v1 ++ ", " ++ show v2 ++ ")"
+
+instance (Show (v1 a), Show (v2 a)) => Show (AugmentedMono v1 v2 a) where
+  show (AugmentedMono v1 v2) = "(" ++ show v1 ++ ", " ++ show v2 ++ ")"
 
 -- Torsors, by pretending to forget the origin and thus the ability to scale.
 newtype Torsor v a = Torsor (v a)

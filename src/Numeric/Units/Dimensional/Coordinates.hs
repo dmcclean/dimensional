@@ -179,9 +179,12 @@ Cartesian coordinate systems form metric spaces.
 
 -}
 
+fmapOverFirst :: (Functor f) => (a -> b) -> (f a, x) -> (f b, x)
+fmapOverFirst f (x, y) = (fmap f x, y)
+
 instance (Fractional a, Real a) => VectorSpace (Offset ('CoordinateSystem sys 'Linear) a) where
   type Dimensions (Offset ('CoordinateSystem sys 'Linear) a) = Representation 'Linear
-  fromList = fmap Offset . fromList
+  fromListWithLeftovers = fmapOverFirst Offset . fromListWithLeftovers
   toList (Offset v) = toList v
   zeroV = Offset zeroV
   (Offset x) ^+^ (Offset y) = Offset (x ^+^ y)
@@ -189,13 +192,13 @@ instance (Fractional a, Real a) => VectorSpace (Offset ('CoordinateSystem sys 'L
 
 instance (Fractional a, Real a) => MonoVectorSpace (Offset ('CoordinateSystem sys 'Linear) a) where
   type Element (Offset ('CoordinateSystem sys 'Linear) a) = a
-  fromMonoList = fmap Offset . fromMonoList
+  fromMonoListWithLeftovers = fmapOverFirst Offset . fromMonoListWithLeftovers
   toMonoList (Offset v) = toMonoList v
   scale s (Offset v) = Offset $ scale s v
 
 instance (Fractional a, Real a) => VectorSpace (Offset ('CoordinateSystem sys 'Planar) a) where
   type Dimensions (Offset ('CoordinateSystem sys 'Planar) a) = Representation 'Planar
-  fromList = fmap Offset . fromList
+  fromListWithLeftovers = fmapOverFirst Offset . fromListWithLeftovers
   toList (Offset v) = toList v
   zeroV = Offset zeroV
   (Offset x) ^+^ (Offset y) = Offset (x ^+^ y)
@@ -203,13 +206,13 @@ instance (Fractional a, Real a) => VectorSpace (Offset ('CoordinateSystem sys 'P
 
 instance (Fractional a, Real a) => MonoVectorSpace (Offset ('CoordinateSystem sys 'Planar) a) where
   type Element (Offset ('CoordinateSystem sys 'Planar) a) = a
-  fromMonoList = fmap Offset . fromMonoList
+  fromMonoListWithLeftovers = fmapOverFirst Offset . fromMonoListWithLeftovers
   toMonoList (Offset v) = toMonoList v
   scale s (Offset v) = Offset $ scale s v
 
 instance (Fractional a, Real a) => VectorSpace (Offset ('CoordinateSystem sys 'Spatial) a) where
   type Dimensions (Offset ('CoordinateSystem sys 'Spatial) a) = Representation 'Spatial
-  fromList = fmap Offset . fromList
+  fromListWithLeftovers = fmapOverFirst Offset . fromListWithLeftovers
   toList (Offset v) = toList v
   zeroV = Offset zeroV
   (Offset x) ^+^ (Offset y) = Offset (x ^+^ y)
@@ -217,7 +220,7 @@ instance (Fractional a, Real a) => VectorSpace (Offset ('CoordinateSystem sys 'S
 
 instance (Fractional a, Real a) => MonoVectorSpace (Offset ('CoordinateSystem sys 'Spatial) a) where
   type Element (Offset ('CoordinateSystem sys 'Spatial) a) = a
-  fromMonoList = fmap Offset . fromMonoList
+  fromMonoListWithLeftovers = fmapOverFirst Offset . fromMonoListWithLeftovers
   toMonoList (Offset v) = toMonoList v
   scale s (Offset v) = Offset $ scale s v
 
