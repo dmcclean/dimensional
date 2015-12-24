@@ -15,7 +15,7 @@ module Numeric.Units.Dimensional.Coordinates
   CoordinateSystemType,
   KnownCoordinateType, canonicalize,
   Projection(..), project, invert,
-  Point(..), Offset(..), Direction, direction, unDirection, offsetBy,
+  Point(..), Offset(..), Direction(..), direction, offsetBy,
   here, there, doug, centerOfEarth
 )
 where
@@ -97,7 +97,7 @@ there = point $ VCons (19.4 *~ meter) (VCons (171.9 *~ meter) (VCons (-41.6 *~ m
 doug = point $ VCons (1557.123 *~ kilo meter) (VCons (-4471.044 *~ kilo meter) (VCons (4259.591 *~ kilo meter) VNil))
 centerOfEarth = point zeroV
 
-direction :: (Real a, Floating a, MetricSpace (Offset sys), VectorSpace (Offset sys a), VectorSpace (Vector (Dimensions (Offset sys a)) a)) => Offset sys a -> Direction sys a
+direction :: (Real a, Floating a, MetricSpace (Offset sys), DistanceDimension (Offset sys) ~ HomogenousDimension (Dimensions (Offset sys a)), VectorSpace (Offset sys a), VectorSpace (Vector (Dimensions (Offset sys a)) a)) => Offset sys a -> Direction sys a
 direction o = Direction (V.direction o)
 
 offsetBy :: (Num a) => Direction sys a -> Length a -> Offset sys a
@@ -182,10 +182,17 @@ Cartesian coordinate systems form metric spaces.
 fmapOverFirst :: (Functor f) => (a -> b) -> (f a, x) -> (f b, x)
 fmapOverFirst f (x, y) = (fmap f x, y)
 
-instance (Fractional a, Real a) => VectorSpace (Offset ('CoordinateSystem sys 'Linear) a) where
-  type Dimensions (Offset ('CoordinateSystem sys 'Linear) a) = Representation 'Linear
+instance (Fractional a, Real a, CVectorMono (Vector (Representation ty) a)) => CVectorMono (Point ('CoordinateSystem sys ty) a) where
+  type Dimensions (Point ('CoordinateSystem sys ty) a) = Representation ty
+  fromListWithLeftovers = fmapOverFirst Point . fromListWithLeftovers
+  toList (Point v) = toList v
+
+instance (Fractional a, Real a, CVectorMono (Vector (Representation ty) a)) => CVectorMono (Offset ('CoordinateSystem sys ty) a) where
+  type Dimensions (Offset ('CoordinateSystem sys ty) a) = Representation ty
   fromListWithLeftovers = fmapOverFirst Offset . fromListWithLeftovers
   toList (Offset v) = toList v
+
+instance (Fractional a, Real a) => VectorSpace (Offset ('CoordinateSystem sys 'Linear) a) where
   zeroV = Offset zeroV
   (Offset x) ^+^ (Offset y) = Offset (x ^+^ y)
   negateV (Offset v) = Offset $ negateV v
@@ -197,9 +204,6 @@ instance (Fractional a, Real a) => MonoVectorSpace (Offset ('CoordinateSystem sy
   scale s (Offset v) = Offset $ scale s v
 
 instance (Fractional a, Real a) => VectorSpace (Offset ('CoordinateSystem sys 'Planar) a) where
-  type Dimensions (Offset ('CoordinateSystem sys 'Planar) a) = Representation 'Planar
-  fromListWithLeftovers = fmapOverFirst Offset . fromListWithLeftovers
-  toList (Offset v) = toList v
   zeroV = Offset zeroV
   (Offset x) ^+^ (Offset y) = Offset (x ^+^ y)
   negateV (Offset v) = Offset $ negateV v
@@ -211,9 +215,6 @@ instance (Fractional a, Real a) => MonoVectorSpace (Offset ('CoordinateSystem sy
   scale s (Offset v) = Offset $ scale s v
 
 instance (Fractional a, Real a) => VectorSpace (Offset ('CoordinateSystem sys 'Spatial) a) where
-  type Dimensions (Offset ('CoordinateSystem sys 'Spatial) a) = Representation 'Spatial
-  fromListWithLeftovers = fmapOverFirst Offset . fromListWithLeftovers
-  toList (Offset v) = toList v
   zeroV = Offset zeroV
   (Offset x) ^+^ (Offset y) = Offset (x ^+^ y)
   negateV (Offset v) = Offset $ negateV v

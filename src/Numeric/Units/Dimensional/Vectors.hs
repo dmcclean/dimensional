@@ -1,3 +1,4 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -13,6 +14,32 @@
 {-# LANGUAGE UndecidableInstances #-} -- for nested application of Concat
 
 module Numeric.Units.Dimensional.Vectors
+(
+  -- * Vectors as Lists of Quantities
+  CVectorMono(..), fromList
+  -- * Vector Spaces
+  -- ** Of Kind `*`
+, VectorSpace(..)
+  -- ** Of Kind `* -> *`
+, MonoVectorSpace(..), fromMonoList, gscale, (^*), (*^), lerp, changeVectorRep
+  -- * Affine Spaces
+, AffineSpace(..), (.-^)
+  -- * Metric Spaces
+, MetricSpace(..), lengthV
+  -- ** Unit Vectors
+, UnitV(..), unitV
+  -- ** Direction Vectors
+, DirectionVector, DirectionSpace, direction
+  -- * General-Purpose Vector Types
+, Vector(..)
+  -- ** Augmented Vectors
+, Augmented(..), AugmentedMono(..)
+  -- ** Commonly Used Type Synonyms
+, V2, V3, V4
+  -- * Utility Functions for Type Level Lists
+, DimensionallyHomogenous(..)
+, MapMul, Concat
+)
 where
 
 import Control.Applicative
@@ -36,19 +63,46 @@ type family Concat (xs :: [k]) (ys :: [k]) :: [k] where
   Concat '[]       ys = ys
   Concat (x ': xs) ys = x ': (Concat xs ys)
 
-class VectorSpace (v :: *) where
+class DimensionallyHomogenous (ds :: [Dimension]) where
+  type HomogenousDimension ds :: Dimension
+
+instance DimensionallyHomogenous '[d] where
+  type HomogenousDimension '[d] = d
+
+instance (d ~ HomogenousDimension ds) => DimensionallyHomogenous (d ': ds) where
+  type HomogenousDimension (d ': ds) = d
+
+-- | The type of monomorphic vector-like types, composed of a list of values with fixed dimensions.
+--
+-- Note that the type need not necessarily be a 'VectorSpace'. Types representing points in affine spaces
+-- may be instances of 'CVectorMono'. In that sense the use of "vector" here is more aligned with its usual
+-- meaning in computer science than with its usual meaning in mathematics.
+class CVectorMono (v :: *) where
+  -- | A list of the 'Dimension' of each element in a vector-like type.
   type Dimensions v :: [Dimension]
+  -- | Construct a monomorphic vector-like type from a list of 'AnyQuantity' values, if sufficiently many
+  -- values are available and their dimensions match the 'Dimensions' of the vector-like type. Return the
+  -- result, if any, along with a list of any remaining values in the input list.
+  --
+  -- Clients are likely to prefer 'fromList', but this type is needed for implementation.
   fromListWithLeftovers :: Real b => [AnyQuantity b] -> (Maybe v, [AnyQuantity b])
+  -- | Convert a monomorphic vector-like type to a list of 'AnyQuantity' values.
+  --
+  -- The length and dimensions of the result list must match the 'Dimensions' of the vector-like type.
   toList :: Fractional a => v -> [AnyQuantity a]
+  -- | Convert a monomorphic vector-like type to a 'Vector' of the same 'Dimensions'.
+  asVector :: forall a.(Real a, Fractional a, VectorSpace (Vector (Dimensions v) a)) => v -> Vector (Dimensions v) a
+  asVector = fromJust . fromList . (toList :: v -> [AnyQuantity a])
+  {-# MINIMAL fromListWithLeftovers, toList #-}
+
+class (CVectorMono v) => VectorSpace (v :: *) where
   zeroV :: v
   (^+^) :: v -> v -> v
   negateV :: v -> v
   negateV x = zeroV ^-^ x
   (^-^) :: v -> v -> v
   x ^-^ y = x ^+^ negateV y
-  asVector :: forall a.(Real a, Fractional a, VectorSpace (Vector (Dimensions v) a)) => v -> Vector (Dimensions v) a
-  asVector = fromJust . fromList . (toList :: v -> [AnyQuantity a])
-  {-# MINIMAL fromListWithLeftovers, toList, zeroV, (^+^), (negateV | (^-^)) #-}
+  {-# MINIMAL zeroV, (^+^), (negateV | (^-^)) #-}
 
 infixl 6 ^+^, ^-^
 
@@ -69,13 +123,12 @@ fromMonoList xs | (result, []) <- fromMonoListWithLeftovers xs = result
 
 type Scalar v = Dimensionless (Element v)
 
+-- | Scales a representationally-homogenous 'Vector' by a 'Quantity' of arbitrary dimension,
+-- forming a new 'Vector' whose dimensions are the element-wise product of the dimensions of the input
+-- quantity and the input vector.
 gscale :: (Num a) => Quantity d a -> Vector ds a -> Vector (MapMul d ds) a
 gscale x (VCons y v) = VCons (x * y) (gscale x v)
 gscale _ VNil = VNil
-
-infixr 7 ^/
-(^/) :: (MonoVectorSpace v, Fractional (Element v)) => v -> Scalar v -> v
-x ^/ s = scale (recip s) x
 
 infixl 7 ^*, *^
 (^*) :: (MonoVectorSpace v) => v -> Scalar v -> v
@@ -84,6 +137,7 @@ infixl 7 ^*, *^
 (*^) :: (MonoVectorSpace v) => Scalar v -> v -> v
 (*^) = scale
 
+-- | Linearly interpolates (or extrapolates) between two vectors.
 lerp :: (MonoVectorSpace v) => v -> v -> Scalar v -> v
 lerp a b t = a ^+^ t *^ (b ^-^ a)
 
@@ -114,11 +168,13 @@ class MetricSpace (v :: * -> *) where
   {-# MINIMAL distance | quadrance #-}
 
 -- Individual quantities can be viewed as single element vectors
-instance (Real a, Fractional a, KnownDimension d) => VectorSpace (Quantity d a) where
+instance (Real a, Fractional a, KnownDimension d) => CVectorMono (Quantity d a) where
   type Dimensions (Quantity d a) = '[d]
   fromListWithLeftovers (x : xs) = (fmap changeRep . promoteQuantity $ x, xs)
   fromListWithLeftovers [] = (Nothing, [])
   toList x = [demoteQuantity . changeRep $ x]
+
+instance (Real a, Fractional a, KnownDimension d) => VectorSpace (Quantity d a) where
   zeroV = _0
   (^+^) = (+)
   negateV = negate
@@ -173,16 +229,12 @@ instance (Storable a, Storable (Vector ds a)) => Storable (Vector (d ': ds) a) w
                return $ VCons x xs
   {-# INLINE peek #-}
 
-instance VectorSpace (Vector '[] a) where
+instance CVectorMono (Vector '[] a) where
   type Dimensions (Vector '[] a) = '[]
   fromListWithLeftovers xs = (Just VNil, xs)
   toList VNil = []
-  zeroV = VNil
-  _ ^+^ _ = VNil
-  negateV = const VNil
-  _ ^-^ _ = VNil
 
-instance (Real a, Fractional a, KnownDimension d, VectorSpace (Vector ds a)) => VectorSpace (Vector (d ': ds) a) where
+instance (Real a, Fractional a, KnownDimension d, CVectorMono (Vector ds a)) => CVectorMono (Vector (d ': ds) a) where
   type Dimensions (Vector (d ': ds) a) = d ': ds
   fromListWithLeftovers (x : xs) = (liftA2 VCons x' xs', left)
     where
@@ -190,6 +242,14 @@ instance (Real a, Fractional a, KnownDimension d, VectorSpace (Vector ds a)) => 
       (xs', left) = fromListWithLeftovers xs
   fromListWithLeftovers [] = (Nothing, [])
   toList (VCons x v) = (demoteQuantity . changeRep $ x) : toList v
+
+instance VectorSpace (Vector '[] a) where
+  zeroV = VNil
+  _ ^+^ _ = VNil
+  negateV = const VNil
+  _ ^-^ _ = VNil
+
+instance (Real a, Fractional a, KnownDimension d, VectorSpace (Vector ds a)) => VectorSpace (Vector (d ': ds) a) where
   zeroV = VCons zeroV zeroV
   (VCons x1 v1) ^+^ (VCons x2 v2) = VCons (x1 ^+^ x2) (v1 ^+^ v2)
   negateV (VCons x v) = VCons (negateV x) (negateV v)
@@ -248,14 +308,34 @@ lengthV = distance zeroV
 normalize :: (MonoVectorSpace (v a), MetricSpace v, DOne ~ DistanceDimension v, a ~ Element (v a), Floating a) => v a -> v a
 normalize x = scale (recip . lengthV $ x) x
 
-type DirectionVector v a = UnitV (Vector (MapMul (Recip (DistanceDimension v)) (Dimensions (v a)))) a
+-- | The type of a direction vector corresponding with a dimensionally homogenous vector type.
+type DirectionVector v a = UnitV
+                           (
+                             Vector 
+                             (
+                               MapMul 
+                                 (Recip (HomogenousDimension (Dimensions (v a))))
+                                 (Dimensions (v a))
+                             )
+                           )
+                           a
 
--- | Converts a vector in a metric space (therefore, one with homogenous dimensions) into a direction vector.
-direction :: (VectorSpace (v a), MetricSpace v, Real a, Floating a, VectorSpace (Vector (Dimensions (v a)) a)) => v a -> DirectionVector v a
+-- | Classifies the type of vectors for which we can take a 'direction'.
+type DirectionSpace v a = (VectorSpace (v a), MetricSpace v, DistanceDimension v ~ HomogenousDimension (Dimensions (v a)), Real a, Floating a, VectorSpace (Vector (Dimensions (v a)) a))
+
+-- | Converts a vector in a metric space with homogenous dimensions into a direction vector.
+--
+-- Each component of the direction vector will be 'Dimensionless'.
+direction :: DirectionSpace v a => v a -> DirectionVector v a
 direction v = UnitV . gscale (recip . lengthV $ v) . asVector $ v
 
+-- | A dimensionally homogenous 'Vector' with two elements.
 type V2 d = Vector '[d, d]
+
+-- | A dimensionally homogenous 'Vector' with three elements.
 type V3 d = Vector '[d, d, d]
+
+-- | A dimensionally homogenous 'Vector' with four elements.
 type V4 d = Vector '[d, d, d, d]
 
 -- Augmented Vectors
@@ -263,13 +343,15 @@ data Augmented (v1 :: *) (v2 :: *) = Augmented !v1 !v2
 
 data AugmentedMono (v1 :: * -> *) (v2 :: * -> *) a = AugmentedMono !(v1 a) !(v2 a)
 
-instance (VectorSpace v1, VectorSpace v2) => VectorSpace (Augmented v1 v2) where
+instance (CVectorMono v1, CVectorMono v2) => CVectorMono (Augmented v1 v2) where
   type Dimensions (Augmented v1 v2) = Concat (Dimensions v1) (Dimensions v2)
   fromListWithLeftovers xs = (liftA2 Augmented v1 v2, xs'')
     where
       (v1, xs') = fromListWithLeftovers xs
       (v2, xs'') = fromListWithLeftovers xs'
   toList (Augmented v1 v2) = toList v1 ++ toList v2
+
+instance (VectorSpace v1, VectorSpace v2) => VectorSpace (Augmented v1 v2) where
   zeroV = Augmented zeroV zeroV
   (Augmented x1 y1) ^+^ (Augmented x2 y2) = Augmented (x1 ^+^ x2) (y1 ^+^ y2)
   negateV (Augmented v1 v2) = Augmented (negateV v1) (negateV v2)
@@ -303,13 +385,15 @@ instance (Storable v1, Storable v2) => Storable (Augmented v1 v2) where
              return $ Augmented v1 v2
   {-# INLINE peek #-}
 
-instance (VectorSpace (v1 a), VectorSpace (v2 a)) => VectorSpace (AugmentedMono v1 v2 a) where
+instance (CVectorMono (v1 a), CVectorMono (v2 a)) => CVectorMono (AugmentedMono v1 v2 a) where
   type Dimensions (AugmentedMono v1 v2 a) = Concat (Dimensions (v1 a)) (Dimensions (v2 a))
   fromListWithLeftovers xs = (liftA2 AugmentedMono v1 v2, xs'')
     where
       (v1, xs') = fromListWithLeftovers xs
       (v2, xs'') = fromListWithLeftovers xs'
   toList (AugmentedMono v1 v2) = toList v1 ++ toList v2
+
+instance (VectorSpace (v1 a), VectorSpace (v2 a)) => VectorSpace (AugmentedMono v1 v2 a) where
   zeroV = (AugmentedMono zeroV zeroV)
   (AugmentedMono x1 y1) ^+^ (AugmentedMono x2 y2) = AugmentedMono (x1 ^+^ x2) (y1 ^+^ y2)
   negateV (AugmentedMono v1 v2) = AugmentedMono (negateV v1) (negateV v2)
@@ -366,11 +450,27 @@ instance (MetricSpace v) => MetricSpace (Torsor v) where
   type DistanceDimension (Torsor v) = DistanceDimension v
   distance (Torsor x) (Torsor y) = distance x y
 
-newtype UnitV v a = UnitV { unUnitV :: (v a) }
+
+-- Unit Vectors
+
+-- | A unit vector.
+newtype UnitV v a = UnitV 
+                    {
+                      unUnitV :: (v a) -- ^ Unwraps a unit vector.
+                    } -- ^ Unsafely constructs a unit vector by promising that the supplied value is normalized.
   deriving (Eq)
+
+fmapOverFirst :: (Functor f) => (a -> b) -> (f a, x) -> (f b, x)
+fmapOverFirst f (x, y) = (fmap f x, y)
+
+instance (CVectorMono (v a), MonoVectorSpace (v a), MetricSpace v, DOne ~ DistanceDimension v, a ~ Element (v a), Floating a) => CVectorMono (UnitV v a) where
+  type Dimensions (UnitV v a) = Dimensions (v a)
+  fromListWithLeftovers = fmapOverFirst unitV . fromListWithLeftovers
+  toList = toList . unUnitV
 
 instance Show (v a) => Show (UnitV v a) where
   show = show . unUnitV
 
+-- | Safely constructs a unit vector from a dimensionless vector by normalizing it.
 unitV :: (MonoVectorSpace (v a), MetricSpace v, DOne ~ DistanceDimension v, a ~ Element (v a), Floating a) => v a -> UnitV v a
 unitV = UnitV . normalize
