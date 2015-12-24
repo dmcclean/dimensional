@@ -259,9 +259,9 @@ type V3 d = Vector '[d, d, d]
 type V4 d = Vector '[d, d, d, d]
 
 -- Augmented Vectors
-data Augmented (v1 :: *) (v2 :: *) = Augmented v1 v2
+data Augmented (v1 :: *) (v2 :: *) = Augmented !v1 !v2
 
-data AugmentedMono (v1 :: * -> *) (v2 :: * -> *) a = AugmentedMono (v1 a) (v2 a)
+data AugmentedMono (v1 :: * -> *) (v2 :: * -> *) a = AugmentedMono !(v1 a) !(v2 a)
 
 instance (VectorSpace v1, VectorSpace v2) => VectorSpace (Augmented v1 v2) where
   type Dimensions (Augmented v1 v2) = Concat (Dimensions v1) (Dimensions v2)
