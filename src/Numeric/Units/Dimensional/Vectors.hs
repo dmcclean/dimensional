@@ -21,6 +21,7 @@ module Numeric.Units.Dimensional.Vectors
   -- ** Of Kind `*`
 , VectorSpace(..)
   -- ** Of Kind `* -> *`
+, CVector(..)
 , MonoVectorSpace(..), fromMonoList, gscale, (^*), (*^), lerp, changeVectorRep
   -- * Affine Spaces
 , AffineSpace(..), (.-^)
@@ -110,18 +111,17 @@ fromList :: (VectorSpace v, Real b) => [AnyQuantity b] -> Maybe v
 fromList xs | (result, []) <- fromListWithLeftovers xs = result
             | otherwise = Nothing
 
--- scale really shouldn't be here, because this might be an affine type
-class (VectorSpace v) => MonoVectorSpace (v :: *) where
-  type Element v :: *
-  fromMonoListWithLeftovers :: [AnyQuantity (Element v)] -> (Maybe v, [AnyQuantity (Element v)])
-  toMonoList :: v -> [AnyQuantity (Element v)]
-  scale :: Scalar v -> v -> v
+class CVector (v :: * -> *) where
+  fromMonoListWithLeftovers :: [AnyQuantity a] -> (Maybe (v a), [AnyQuantity a])
+  toMonoList :: v a -> [AnyQuantity a]
 
-fromMonoList :: (MonoVectorSpace v) => [AnyQuantity (Element v)] -> Maybe v
+-- scale really shouldn't be here, because this might be an affine type
+class (CVector v) => MonoVectorSpace (v :: * -> *) where
+  scale :: (Num a) => Dimensionless a -> v a -> v a
+
+fromMonoList :: (MonoVectorSpace v) => [AnyQuantity a] -> Maybe (v a)
 fromMonoList xs | (result, []) <- fromMonoListWithLeftovers xs = result
                 | otherwise = Nothing
-
-type Scalar v = Dimensionless (Element v)
 
 -- | Scales a representationally-homogenous 'Vector' by a 'Quantity' of arbitrary dimension,
 -- forming a new 'Vector' whose dimensions are the element-wise product of the dimensions of the input
@@ -131,14 +131,14 @@ gscale x (VCons y v) = VCons (x * y) (gscale x v)
 gscale _ VNil = VNil
 
 infixl 7 ^*, *^
-(^*) :: (MonoVectorSpace v) => v -> Scalar v -> v
+(^*) :: (MonoVectorSpace v, Num a) => v a -> Dimensionless a -> v a
 (^*) = flip scale
 
-(*^) :: (MonoVectorSpace v) => Scalar v -> v -> v
+(*^) :: (MonoVectorSpace v, Num a) => Dimensionless a -> v a -> v a
 (*^) = scale
 
 -- | Linearly interpolates (or extrapolates) between two vectors.
-lerp :: (MonoVectorSpace v) => v -> v -> Scalar v -> v
+lerp :: (MonoVectorSpace v, Num a, VectorSpace (v a)) => v a -> v a -> Dimensionless a -> v a
 lerp a b t = a ^+^ t *^ (b ^-^ a)
 
 changeVectorRep :: forall v1 v2 a.(VectorSpace v1, VectorSpace v2, Real a, Fractional a, Dimensions v1 ~ Dimensions v2) => Proxy a -> v1 -> v2
@@ -180,11 +180,12 @@ instance (Real a, Fractional a, KnownDimension d) => VectorSpace (Quantity d a) 
   negateV = negate
   (^-^) = (-)
 
-instance (Real a, Fractional a, KnownDimension d) => MonoVectorSpace (Quantity d a) where
-  type Element (Quantity d a) = a
+instance (KnownDimension d) => CVector (Quantity d) where
   fromMonoListWithLeftovers (x : xs) = (promoteQuantity x, xs)
   fromMonoListWithLeftovers [] = (Nothing, [])
   toMonoList x = [demoteQuantity x]
+
+instance (KnownDimension d) => MonoVectorSpace (Quantity d) where
   scale s x = s * x
 
 instance (Real a, Fractional a, KnownDimension d) => AffineSpace (Quantity d a) where
@@ -255,20 +256,22 @@ instance (Real a, Fractional a, KnownDimension d, VectorSpace (Vector ds a)) => 
   negateV (VCons x v) = VCons (negateV x) (negateV v)
   (VCons x1 v1) ^-^ (VCons x2 v2) = VCons (x1 ^-^ x2) (v1 ^-^ v2)
 
-instance MonoVectorSpace (Vector '[] a) where
-  type Element (Vector '[] a) = a
+instance CVector (Vector '[]) where
   fromMonoListWithLeftovers xs = (Just VNil, xs)
   toMonoList VNil = []
-  scale _ _ = VNil
 
-instance (Real a, Fractional a, KnownDimension d, a ~ Element (Vector ds a), MonoVectorSpace (Vector ds a)) => MonoVectorSpace (Vector (d ': ds) a) where
-  type Element (Vector (d ': ds) a) = a
+instance (CVector (Vector ds), KnownDimension d) => CVector (Vector (d ': ds)) where
   fromMonoListWithLeftovers (x : xs) = (liftA2 VCons x' xs', left)
     where
       x' = promoteQuantity x
       (xs', left) = fromMonoListWithLeftovers xs
   fromMonoListWithLeftovers [] = (Nothing, [])
   toMonoList (VCons x v) = (demoteQuantity x) : toMonoList v
+
+instance MonoVectorSpace (Vector '[]) where
+  scale _ _ = VNil
+
+instance (KnownDimension d, MonoVectorSpace (Vector ds)) => MonoVectorSpace (Vector (d ': ds)) where  
   scale s (VCons x v) = VCons (scale s x) (scale s v)
 
 instance MetricSpace (Vector '[d]) where
@@ -294,7 +297,7 @@ instance (d ~ (DistanceDimension (Vector (d' ': ds))), MetricSpace (Vector (d' '
 instance Show (Vector '[] a) where
   show VNil = "<| |>"
 
-instance (Show a, Real a, Fractional a, KnownDimension d, a ~ Element (Vector ds a), MonoVectorSpace (Vector ds a)) => Show (Vector (d ': ds) a) where
+instance (Show a, Real a, Fractional a, KnownDimension d, MonoVectorSpace (Vector ds)) => Show (Vector (d ': ds) a) where
   show v = "<| " ++ elems v ++ " |>"
     where
       elems = intercalate ", " . fmap show . toMonoList
@@ -305,7 +308,7 @@ lengthV = distance zeroV
 
 -- | In a 'MonoVectorSpace' that is also a 'MetricSpace' with a 'DistanceDimension' of 'DOne', it's possible to
 -- 'scale' a vector by the reciprocal of it's 'length', obtaining a normalized version of the vector.
-normalize :: (MonoVectorSpace (v a), MetricSpace v, DOne ~ DistanceDimension v, a ~ Element (v a), Floating a) => v a -> v a
+normalize :: (MonoVectorSpace v, MetricSpace v, DOne ~ DistanceDimension v, VectorSpace (v a), Floating a) => v a -> v a
 normalize x = scale (recip . lengthV $ x) x
 
 -- | The type of a direction vector corresponding with a dimensionally homogenous vector type.
@@ -356,15 +359,6 @@ instance (VectorSpace v1, VectorSpace v2) => VectorSpace (Augmented v1 v2) where
   (Augmented x1 y1) ^+^ (Augmented x2 y2) = Augmented (x1 ^+^ x2) (y1 ^+^ y2)
   negateV (Augmented v1 v2) = Augmented (negateV v1) (negateV v2)
 
-instance (MonoVectorSpace v1, MonoVectorSpace v2, Element v1 ~ Element v2) => MonoVectorSpace (Augmented v1 v2) where
-  type Element (Augmented v1 v2) = Element v1
-  fromMonoListWithLeftovers xs = (liftA2 Augmented v1 v2, xs'')
-    where
-      (v1, xs') = fromMonoListWithLeftovers xs
-      (v2, xs'') = fromMonoListWithLeftovers xs'
-  toMonoList (Augmented v1 v2) = toMonoList v1 ++ toMonoList v2
-  scale s (Augmented v1 v2) = Augmented (scale s v1) (scale s v2)
-
 instance (AffineSpace v1, AffineSpace v2) => AffineSpace (Augmented v1 v2) where
   type Diff (Augmented v1 v2) = Augmented (Diff v1) (Diff v2)
   (Augmented x1 y1) .-. (Augmented x2 y2) = Augmented (x1 .-. x2) (y1 .-. y2)
@@ -398,13 +392,14 @@ instance (VectorSpace (v1 a), VectorSpace (v2 a)) => VectorSpace (AugmentedMono 
   (AugmentedMono x1 y1) ^+^ (AugmentedMono x2 y2) = AugmentedMono (x1 ^+^ x2) (y1 ^+^ y2)
   negateV (AugmentedMono v1 v2) = AugmentedMono (negateV v1) (negateV v2)
 
-instance (MonoVectorSpace (v1 a), MonoVectorSpace (v2 a), Element (v1 a) ~ Element (v2 a)) => MonoVectorSpace (AugmentedMono v1 v2 a) where
-  type Element (AugmentedMono v1 v2 a) = Element (v1 a)
+instance (CVector v1, CVector v2) => CVector (AugmentedMono v1 v2) where
   fromMonoListWithLeftovers xs = (liftA2 AugmentedMono v1 v2, xs'')
     where
       (v1, xs') = fromMonoListWithLeftovers xs
       (v2, xs'') = fromMonoListWithLeftovers xs'
   toMonoList (AugmentedMono v1 v2) = toMonoList v1 ++ toMonoList v2
+
+instance (MonoVectorSpace v1, MonoVectorSpace v2) => MonoVectorSpace (AugmentedMono v1 v2) where
   scale s (AugmentedMono v1 v2) = AugmentedMono (scale s v1) (scale s v2)
 
 instance (AffineSpace (v1 a), AffineSpace (v2 a)) => AffineSpace (AugmentedMono v1 v2 a) where
@@ -463,7 +458,7 @@ newtype UnitV v a = UnitV
 fmapOverFirst :: (Functor f) => (a -> b) -> (f a, x) -> (f b, x)
 fmapOverFirst f (x, y) = (fmap f x, y)
 
-instance (CVectorMono (v a), MonoVectorSpace (v a), MetricSpace v, DOne ~ DistanceDimension v, a ~ Element (v a), Floating a) => CVectorMono (UnitV v a) where
+instance (CVectorMono (v a), MonoVectorSpace v, MetricSpace v, DOne ~ DistanceDimension v, VectorSpace (v a), Floating a) => CVectorMono (UnitV v a) where
   type Dimensions (UnitV v a) = Dimensions (v a)
   fromListWithLeftovers = fmapOverFirst unitV . fromListWithLeftovers
   toList = toList . unUnitV
@@ -472,5 +467,5 @@ instance Show (v a) => Show (UnitV v a) where
   show = show . unUnitV
 
 -- | Safely constructs a unit vector from a dimensionless vector by normalizing it.
-unitV :: (MonoVectorSpace (v a), MetricSpace v, DOne ~ DistanceDimension v, a ~ Element (v a), Floating a) => v a -> UnitV v a
+unitV :: (MonoVectorSpace v, MetricSpace v, DOne ~ DistanceDimension v, VectorSpace (v a), Floating a) => v a -> UnitV v a
 unitV = UnitV . normalize

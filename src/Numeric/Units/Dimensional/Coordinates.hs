@@ -2,10 +2,12 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NegativeLiterals #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Numeric.Units.Dimensional.Coordinates
@@ -192,38 +194,21 @@ instance (Fractional a, Real a, CVectorMono (Vector (Representation ty) a)) => C
   fromListWithLeftovers = fmapOverFirst Offset . fromListWithLeftovers
   toList (Offset v) = toList v
 
-instance (Fractional a, Real a) => VectorSpace (Offset ('CoordinateSystem sys 'Linear) a) where
-  zeroV = Offset zeroV
-  (Offset x) ^+^ (Offset y) = Offset (x ^+^ y)
-  negateV (Offset v) = Offset $ negateV v
+deriving instance (CVector (Vector (Representation ty))) => CVector (Point ('CoordinateSystem sys ty))
 
-instance (Fractional a, Real a) => MonoVectorSpace (Offset ('CoordinateSystem sys 'Linear) a) where
-  type Element (Offset ('CoordinateSystem sys 'Linear) a) = a
-  fromMonoListWithLeftovers = fmapOverFirst Offset . fromMonoListWithLeftovers
-  toMonoList (Offset v) = toMonoList v
-  scale s (Offset v) = Offset $ scale s v
+deriving instance (CVector (Vector (Representation ty))) => CVector (Offset ('CoordinateSystem sys ty))
 
-instance (Fractional a, Real a) => VectorSpace (Offset ('CoordinateSystem sys 'Planar) a) where
-  zeroV = Offset zeroV
-  (Offset x) ^+^ (Offset y) = Offset (x ^+^ y)
-  negateV (Offset v) = Offset $ negateV v
+deriving instance (Fractional a, Real a) => VectorSpace (Offset ('CoordinateSystem sys 'Linear) a)
 
-instance (Fractional a, Real a) => MonoVectorSpace (Offset ('CoordinateSystem sys 'Planar) a) where
-  type Element (Offset ('CoordinateSystem sys 'Planar) a) = a
-  fromMonoListWithLeftovers = fmapOverFirst Offset . fromMonoListWithLeftovers
-  toMonoList (Offset v) = toMonoList v
-  scale s (Offset v) = Offset $ scale s v
+deriving instance MonoVectorSpace (Offset ('CoordinateSystem sys 'Linear))
 
-instance (Fractional a, Real a) => VectorSpace (Offset ('CoordinateSystem sys 'Spatial) a) where
-  zeroV = Offset zeroV
-  (Offset x) ^+^ (Offset y) = Offset (x ^+^ y)
-  negateV (Offset v) = Offset $ negateV v
+deriving instance (Fractional a, Real a) => VectorSpace (Offset ('CoordinateSystem sys 'Planar) a)
 
-instance (Fractional a, Real a) => MonoVectorSpace (Offset ('CoordinateSystem sys 'Spatial) a) where
-  type Element (Offset ('CoordinateSystem sys 'Spatial) a) = a
-  fromMonoListWithLeftovers = fmapOverFirst Offset . fromMonoListWithLeftovers
-  toMonoList (Offset v) = toMonoList v
-  scale s (Offset v) = Offset $ scale s v
+deriving instance MonoVectorSpace (Offset ('CoordinateSystem sys 'Planar))
+
+deriving instance (Fractional a, Real a) => VectorSpace (Offset ('CoordinateSystem sys 'Spatial) a)
+
+deriving instance MonoVectorSpace (Offset ('CoordinateSystem sys 'Spatial))
 
 instance (Fractional a, Real a) => AffineSpace (Point ('CoordinateSystem sys 'Linear) a) where
   type Diff (Point ('CoordinateSystem sys 'Linear) a) = Offset ('CoordinateSystem sys 'Linear) a
