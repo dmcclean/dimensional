@@ -57,17 +57,17 @@ instance KnownCoordinateType 'Planar where
   canonicalize _ = id
 
 instance KnownCoordinateType 'Polar where
-  canonicalize _ (VCons r (VCons theta VNil)) | r < _0 = VCons (negate r) (VCons (singleTurnAngle (theta + pi)) VNil)
-                                              | otherwise = VCons r (VCons (singleTurnAngle theta) VNil)
+  canonicalize _ (V2 r theta) | r < _0    = V2 (negate r) (singleTurnAngle (theta + pi))
+                              | otherwise = V2 r          (singleTurnAngle theta)
   canonicalize _ x = x -- GHC 7.10 can't realize that this case is unreachable
 
 instance KnownCoordinateType 'Spherical where
-  canonicalize _ (VCons r (VCons theta (VCons phi VNil))) = (VCons r (VCons theta (VCons phi VNil))) -- should constrain angles, non-negative radius
+  canonicalize _ (V3 r theta phi) = (V3 r theta phi) -- should constrain angles, non-negative radius
   canonicalize _ x = x -- GHC 7.10 can't realize that this case is unreachable
 
 instance KnownCoordinateType 'Cylindrical where
-  canonicalize _ (VCons r (VCons theta vz)) | r < _0 = VCons (negate r) (VCons (singleTurnAngle (theta + pi)) vz)
-                                            | otherwise = VCons r (VCons (singleTurnAngle theta) vz)
+  canonicalize _ (V3 r theta z) | r < _0    = V3 (negate r) (singleTurnAngle (theta + pi)) z
+                                | otherwise = V3 r (singleTurnAngle theta) z
   canonicalize _ x = x -- GHC 7.10 can't realize that this case is unreachable
 
 instance KnownCoordinateType 'Spatial where
@@ -94,9 +94,9 @@ newtype Direction (sys :: CoordinateSystem) a = Direction { unDirection :: Direc
 type ECEF = 'CoordinateSystem "ECEF" 'Spatial
 
 here, there, doug, centerOfEarth :: Point ECEF Double
-here = point $ VCons (3 *~ meter) (VCons (-12 *~ meter) (VCons (7 *~ meter) VNil))
-there = point $ VCons (19.4 *~ meter) (VCons (171.9 *~ meter) (VCons (-41.6 *~ meter) VNil))
-doug = point $ VCons (1557.123 *~ kilo meter) (VCons (-4471.044 *~ kilo meter) (VCons (4259.591 *~ kilo meter) VNil))
+here = point $ V3 (3 *~ meter) (-12 *~ meter) (7 *~ meter)
+there = point $ V3 (19.4 *~ meter) (171.9 *~ meter) (-41.6 *~ meter)
+doug = point $ V3 (1557.123 *~ kilo meter) (-4471.044 *~ kilo meter) (4259.591 *~ kilo meter)
 centerOfEarth = point zeroV
 
 direction :: (Real a, Floating a, MetricSpace (Offset sys), DistanceDimension (Offset sys) ~ HomogenousDimension (Dimensions (Offset sys a)), VectorSpace (Offset sys a), VectorSpace (Vector (Dimensions (Offset sys a)) a)) => Offset sys a -> Direction sys a
@@ -147,7 +147,7 @@ project (Composed bc ab) = project bc . project ab
 project (Translate offset) = (.+^ offset)
 project (RotatePlanar theta) = coerce f
   where
-    f (VCons x (VCons y VNil)) = VCons x' (VCons y' VNil)
+    f (V2 x y) = V2 x' y'
       where
         x' = c * x - s * y
         y' = s * x + c * y
@@ -156,21 +156,21 @@ project (RotatePlanar theta) = coerce f
     f _ = error "Unreachable" -- Can't find a type annotation for f that works
 project (RotatePolar theta) = coerce f
   where
-    f (VCons r (VCons theta' VNil)) = VCons r (VCons (theta + theta') VNil)
+    f (V2 r theta') = V2 r (theta + theta')
     f _ = error "Unreachable" -- GHC 7.10 can't deduce that this case is not required
 project PlanarToPolar = coerce f
   where
     f :: (RealFloat a) => Vector '[DLength, DLength] a -> Vector '[DLength, DPlaneAngle] a
-    f p@(VCons x (VCons y VNil)) = let r = lengthV p
-                                       theta = atan2 y x
-                                    in (VCons r (VCons theta VNil))
+    f p@(V2 x y) = let r = lengthV p
+                       theta = atan2 y x
+                    in V2 r theta
     f _ = error "Unreachable" -- GHC 7.10 can't deduce that this case is not required
 project PolarToPlanar = coerce f
   where
     f :: (Floating a) => Vector '[DLength, DPlaneAngle] a -> Vector '[DLength, DLength] a
-    f (VCons r (VCons theta VNil)) = let x = r * cos theta
-                                         y = r * sin theta
-                                      in (VCons x (VCons y VNil))
+    f (V2 r theta) = let x = r * cos theta
+                         y = r * sin theta
+                      in V2 x y
     f _ = error "Unreachable" -- GHC 7.10 can't deduce that this case is not required
 
 {-

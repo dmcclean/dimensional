@@ -5,6 +5,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -37,6 +38,8 @@ module Numeric.Units.Dimensional.Vectors
 , Augmented(..), AugmentedMono(..)
   -- ** Commonly Used Type Synonyms
 , V2, V3, V4
+  -- ** Commonly Used Pattern Synonyms
+, pattern V2, pattern V3, pattern V4
   -- * Utility Functions for Type Level Lists
 , DimensionallyHomogenous(..)
 , MapMul, Concat
@@ -340,6 +343,18 @@ type V3 d = Vector '[d, d, d]
 
 -- | A dimensionally homogenous 'Vector' with four elements.
 type V4 d = Vector '[d, d, d, d]
+
+-- | Matches or constructs a 'Vector' with two elements, which need not be dimensionally homogenous.
+pattern V2 :: () => () => Quantity d1 a -> Quantity d2 a -> Vector '[d1, d2] a
+pattern V2 x y = VCons x (VCons y VNil)
+
+-- | Matches or constructs a 'Vector' with three elements, which need not be dimensionally homogenous.
+pattern V3 :: () => () => Quantity d1 a -> Quantity d2 a -> Quantity d3 a -> Vector '[d1, d2, d3] a
+pattern V3 x y z = VCons x (VCons y (VCons z VNil))
+
+-- | Matches or constructs a 'Vector' with four elements, which need not be dimensionally homogenous.
+pattern V4 :: () => () => Quantity d1 a -> Quantity d2 a -> Quantity d3 a -> Quantity d4 a -> Vector '[d1, d2, d3, d4] a
+pattern V4 w x y z = VCons w (VCons x (VCons y (VCons z VNil)))
 
 -- Augmented Vectors
 data Augmented (v1 :: *) (v2 :: *) = Augmented !v1 !v2
