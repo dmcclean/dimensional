@@ -39,9 +39,9 @@ module Numeric.Units.Dimensional.Vectors
   -- ** Augmented Vectors
 , Augmented(..), AugmentedMono(..)
   -- ** Commonly Used Type Synonyms
-, V2, V3, V4
+, V0, V1, V2, V3, V4
   -- ** Commonly Used Pattern Synonyms
-, pattern V2, pattern V3, pattern V4
+, pattern V1, pattern V2, pattern V3, pattern V4
   -- * Utility Functions for Type Level Lists
 , DimensionallyHomogenous(..)
 , MapMul, Concat
@@ -364,6 +364,12 @@ type DirectionSpace v a = (VectorSpace (v a), MetricSpace v, DistanceDimension v
 direction :: DirectionSpace v a => v a -> DirectionVector v a
 direction v = UnitV . gscale (recip . lengthV $ v) . asVector $ v
 
+-- | A 'Vector' with zero elements.
+type V0 = Vector '[]
+
+-- | A 'Vector' with one element.
+type V1 d = Vector '[d]
+
 -- | A dimensionally homogenous 'Vector' with two elements.
 type V2 d = Vector '[d, d]
 
@@ -372,6 +378,10 @@ type V3 d = Vector '[d, d, d]
 
 -- | A dimensionally homogenous 'Vector' with four elements.
 type V4 d = Vector '[d, d, d, d]
+
+-- | Matches or constructs a 'Vector' with one element.
+pattern V1 :: () => () => Quantity d1 a -> Vector '[d1] a
+pattern V1 x = VCons x VNil
 
 -- | Matches or constructs a 'Vector' with two elements, which need not be dimensionally homogenous.
 pattern V2 :: () => () => Quantity d1 a -> Quantity d2 a -> Vector '[d1, d2] a
