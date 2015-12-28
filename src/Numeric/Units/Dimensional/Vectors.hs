@@ -17,13 +17,15 @@
 module Numeric.Units.Dimensional.Vectors
 (
   -- * Vectors as Lists of Quantities
+  -- ** Of Kind '*'
   CVectorMono(..), fromList
+  -- ** Of Kind @ * -> * @
+, CVector(..), fromMonoList
   -- * Vector Spaces
-  -- ** Of Kind `*`
+  -- ** Of Kind '*'
 , VectorSpace(..)
-  -- ** Of Kind `* -> *`
-, CVector(..)
-, MonoVectorSpace(..), fromMonoList, gscale, (^*), (*^), lerp, changeVectorRep
+  -- ** Of Kind @ * -> * @
+, MonoVectorSpace(..), gscale, (^*), (*^), lerp, changeVectorRep
   -- * Affine Spaces
 , AffineSpace(..), (.-^)
   -- * Metric Spaces
@@ -76,7 +78,7 @@ instance DimensionallyHomogenous '[d] where
 instance (d ~ HomogenousDimension ds) => DimensionallyHomogenous (d ': ds) where
   type HomogenousDimension (d ': ds) = d
 
--- | The type of monomorphic vector-like types, composed of a list of values with fixed dimensions.
+-- | The type of representationally-heterogenous vector-like types, composed of a list of values with fixed dimensions.
 --
 -- Note that the type need not necessarily be a 'VectorSpace'. Types representing points in affine spaces
 -- may be instances of 'CVectorMono'. In that sense the use of "vector" here is more aligned with its usual
@@ -84,19 +86,20 @@ instance (d ~ HomogenousDimension ds) => DimensionallyHomogenous (d ': ds) where
 class CVectorMono (v :: *) where
   -- | A list of the 'Dimension' of each element in a vector-like type.
   type Dimensions v :: [Dimension]
-  -- | Construct a monomorphic vector-like type from a list of 'AnyQuantity' values, if sufficiently many
+  -- | Construct a representationally-heterogenous vector-like type from a list of 'AnyQuantity' values, if sufficiently many
   -- values are available and their dimensions match the 'Dimensions' of the vector-like type. Return the
   -- result, if any, along with a list of any remaining values in the input list.
   --
   -- Clients are likely to prefer 'fromList', but this type is needed for implementation.
   fromListWithLeftovers :: Real b => [AnyQuantity b] -> (Maybe v, [AnyQuantity b])
-  -- | Convert a monomorphic vector-like type to a list of 'AnyQuantity' values.
+  -- | Convert a representationally-heterogenous vector-like type to a list of 'AnyQuantity' values.
   --
   -- The length and dimensions of the result list must match the 'Dimensions' of the vector-like type.
   toList :: Fractional a => v -> [AnyQuantity a]
-  -- | Convert a monomorphic vector-like type to a 'Vector' of the same 'Dimensions'.
+  -- | Convert a representationally-heterogenous vector-like type to a 'Vector' of the same 'Dimensions'.
   asVector :: forall a.(Real a, Fractional a, VectorSpace (Vector (Dimensions v) a)) => v -> Vector (Dimensions v) a
   asVector = fromJust . fromList . (toList :: v -> [AnyQuantity a])
+    -- The types here promise us that the fromJust will succeed.
   {-# MINIMAL fromListWithLeftovers, toList #-}
 
 class (CVectorMono v) => VectorSpace (v :: *) where
@@ -110,18 +113,37 @@ class (CVectorMono v) => VectorSpace (v :: *) where
 
 infixl 6 ^+^, ^-^
 
+-- | Construct a representationally-heterogenous vector-like type from a list of 'AnyQuantity' values, if precisely as many
+-- values are available as are required and their dimensions match the 'Dimensions' of the vector-like type. Return 'Nothing'
+-- if these conditions are not met.
 fromList :: (VectorSpace v, Real b) => [AnyQuantity b] -> Maybe v
 fromList xs | (result, []) <- fromListWithLeftovers xs = result
             | otherwise = Nothing
 
+-- | The type of representationally-homogenous vector-like types, composed of a list of values with fixed dimensions.
+--
+-- Note that the type need not necessarily be a 'VectorSpace'. Types representing points in affine spaces
+-- may be instances of 'CVector'. In that sense the use of "vector" here is more aligned with its usual
+-- meaning in computer science than with its usual meaning in mathematics.
 class CVector (v :: * -> *) where
+  -- | Construct a representationally-homogenous vector-like type from a list of 'AnyQuantity' values, if sufficiently many
+  -- values are available and their dimensions match the 'Dimensions' of the vector-like type. Return the
+  -- result, if any, along with a list of any remaining values in the input list.
+  --
+  -- Clients are likely to prefer 'fromMonoList', but this type is needed for implementation.
   fromMonoListWithLeftovers :: [AnyQuantity a] -> (Maybe (v a), [AnyQuantity a])
+  -- | Convert a representationally-homogenous vector-like type to a list of 'AnyQuantity' values.
+  --
+  -- The length and dimensions of the result list must match the 'Dimensions' of the vector-like type.
   toMonoList :: v a -> [AnyQuantity a]
 
 -- scale really shouldn't be here, because this might be an affine type
 class (CVector v) => MonoVectorSpace (v :: * -> *) where
   scale :: (Num a) => Dimensionless a -> v a -> v a
 
+-- | Construct a representationally-homogenous vector-like type from a list of 'AnyQuantity' values, if precisely as many
+-- values are available as are required and their dimensions match the 'Dimensions' of the vector-like type. Return 'Nothing'
+-- if these conditions are not met.
 fromMonoList :: (MonoVectorSpace v) => [AnyQuantity a] -> Maybe (v a)
 fromMonoList xs | (result, []) <- fromMonoListWithLeftovers xs = result
                 | otherwise = Nothing
@@ -160,10 +182,17 @@ p .-^ v = p .+^ negateV v
 
 infixl 6 .-^
 
+-- | A space in which we can compute the 'distance' between any two values, which will be a 'Quantity'
+-- of a specified 'Dimension', the 'DistanceDimension' of the 'MetricSpace'.
 class MetricSpace (v :: * -> *) where
+  -- | Obtains the 'Dimension' used to measure distances in a 'MetricSpace'.
   type DistanceDimension v :: Dimension
+  -- | Calculates the distance between two values in a metric space.
   distance :: (Floating a) =>  v a -> v a -> Quantity (DistanceDimension v) a
   distance x y = Quantity . P.sqrt . unQuantity $ quadrance x y -- This implementation cannot use the dimensionally typed sqrt because it can't deduce that the square root of the squared dimension is the same
+  -- | Calculates the square of the distance between two values in a metric space.
+  --
+  -- This is provided because it makes writing recursive instances much easier.
   quadrance :: (Floating a) => v a -> v a -> Quantity ((DistanceDimension v) ^ 'Pos2) a
   quadrance x y = d ^ pos2
     where
@@ -292,7 +321,7 @@ instance (Real a, Fractional a, KnownDimension d, VectorSpace (Vector ds a)) => 
   (.-.) = (^-^)
   (.+^) = (^+^)
 
--- The mention of d here is necessary to prevent this instance from overlapping with the base case of Vector '[DLength] a
+-- The mention of d here is necessary to prevent this instance from overlapping with the base case of Vector '[d] a
 instance (d ~ (DistanceDimension (Vector (d' ': ds))), MetricSpace (Vector (d' ': ds))) => MetricSpace (Vector (d ': d' ': ds)) where
   type DistanceDimension (Vector (d ': d' ': ds)) = d
   quadrance (VCons x1 v1) (VCons x2 v2) = quadrance x1 x2 + quadrance v1 v2
