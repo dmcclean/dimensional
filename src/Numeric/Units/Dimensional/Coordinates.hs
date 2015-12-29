@@ -59,16 +59,13 @@ instance KnownCoordinateType 'Planar where
 instance KnownCoordinateType 'Polar where
   canonicalize _ (V2 r theta) | r < _0    = V2 (negate r) (singleTurnAngle (theta + pi))
                               | otherwise = V2 r          (singleTurnAngle theta)
-  canonicalize _ x = x -- GHC 7.10 can't realize that this case is unreachable
 
 instance KnownCoordinateType 'Spherical where
   canonicalize _ (V3 r theta phi) = (V3 r theta phi) -- should constrain angles, non-negative radius
-  canonicalize _ x = x -- GHC 7.10 can't realize that this case is unreachable
 
 instance KnownCoordinateType 'Cylindrical where
   canonicalize _ (V3 r theta z) | r < _0    = V3 (negate r) (singleTurnAngle (theta + pi)) z
                                 | otherwise = V3 r (singleTurnAngle theta) z
-  canonicalize _ x = x -- GHC 7.10 can't realize that this case is unreachable
 
 instance KnownCoordinateType 'Spatial where
   canonicalize _ = id
