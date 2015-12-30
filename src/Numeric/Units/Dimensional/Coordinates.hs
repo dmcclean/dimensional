@@ -18,7 +18,7 @@ module Numeric.Units.Dimensional.Coordinates
   CoordinateSystemType,
   KnownCoordinateType, canonicalize,
   Projection(..), project, invert,
-  Point(..), Offset(..), Direction(..), direction, scaleDirection,
+  Point(..), point, Offset(..), Direction(..), direction, scaleDirection,
   here, there, doug, centerOfEarth
 )
 where
@@ -238,6 +238,10 @@ instance MetricSpace (Point ('CoordinateSystem sys 'Planar)) where
 instance MetricSpace (Offset ('CoordinateSystem sys 'Planar)) where
   type DistanceDimension (Offset ('CoordinateSystem sys 'Planar)) = DLength
   distance (Offset x) (Offset y) = distance x y
+
+instance MetricSpace (Point ('CoordinateSystem sys 'Polar)) where
+  type DistanceDimension (Point ('CoordinateSystem sys 'Polar)) = DLength
+  quadrance (Point (V2 r1 theta1)) (Point (V2 r2 theta2)) = r1 ^ pos2 + r2 ^ pos2 - _2 * r1 * r2 * cos (theta2 - theta1)
 
 instance MetricSpace (Point ('CoordinateSystem sys 'Spatial)) where
   type DistanceDimension (Point ('CoordinateSystem sys 'Spatial)) = DLength
