@@ -18,7 +18,7 @@ module Numeric.Units.Dimensional.Coordinates
   CoordinateSystemType,
   KnownCoordinateType, canonicalize,
   Projection(..), project, invert,
-  Point(..), Offset(..), Direction(..), direction, offsetBy,
+  Point(..), Offset(..), Direction(..), direction, scaleDirection,
   here, there, doug, centerOfEarth
 )
 where
@@ -99,8 +99,8 @@ centerOfEarth = point zeroV
 direction :: (Real a, Floating a, MetricSpace (Offset sys), DistanceDimension (Offset sys) ~ HomogenousDimension (Dimensions (Offset sys a)), VectorSpace (Offset sys a), VectorSpace (Vector (Dimensions (Offset sys a)) a)) => Offset sys a -> Direction sys a
 direction o = Direction (V.direction o)
 
-offsetBy :: (Num a, Representation (CoordinateSystemType sys) ~ MapMul DLength (MapMul (DOne / HomogenousDimension (Dimensions (Offset sys a))) (Dimensions (Offset sys a)) )) => Direction sys a -> Length a -> Offset sys a
-offsetBy dir dist = Offset . gscale dist . unUnitV . unDirection $ dir
+scaleDirection :: (Num a, Representation (CoordinateSystemType sys) ~ MapMul DLength (MapMul (DOne / HomogenousDimension (Dimensions (Offset sys a))) (Dimensions (Offset sys a)) )) => Direction sys a -> Length a -> Offset sys a
+scaleDirection dir dist = Offset . gscale dist . unUnitV . unDirection $ dir
   -- this crazy context wouldn't be necessary if we could have appropriate role signatures in the definition of Dimensional
   -- or if we had a quite sophisticated solver
 
