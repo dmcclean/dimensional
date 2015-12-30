@@ -243,6 +243,10 @@ instance MetricSpace (Point ('CoordinateSystem sys 'Polar)) where
   type DistanceDimension (Point ('CoordinateSystem sys 'Polar)) = DLength
   quadrance (Point (V2 r1 theta1)) (Point (V2 r2 theta2)) = r1 ^ pos2 + r2 ^ pos2 - _2 * r1 * r2 * cos (theta2 - theta1)
 
+instance MetricSpace (Point ('CoordinateSystem sys 'Cylindrical)) where
+  type DistanceDimension (Point ('CoordinateSystem sys 'Cylindrical)) = DLength
+  quadrance (Point (V3 r1 theta1 z1)) (Point (V3 r2 theta2 z2)) = r1 ^ pos2 + r2 ^ pos2 - _2 * r1 * r2 * cos (theta2 - theta1) + (z1 - z2) ^ pos2
+
 instance MetricSpace (Point ('CoordinateSystem sys 'Spatial)) where
   type DistanceDimension (Point ('CoordinateSystem sys 'Spatial)) = DLength
   distance (Point x) (Point y) = distance x y
