@@ -9,6 +9,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Numeric.Units.Dimensional.Coordinates
 (
@@ -28,7 +29,6 @@ import GHC.TypeLits (Symbol, KnownSymbol, symbolVal)
 import Numeric.Units.Dimensional.Prelude
 import Numeric.Units.Dimensional.Vectors hiding (direction)
 import qualified Numeric.Units.Dimensional.Vectors as V
-import Unsafe.Coerce
 
 data CoordinateType = Linear
                     | Planar
@@ -99,9 +99,10 @@ centerOfEarth = point zeroV
 direction :: (Real a, Floating a, MetricSpace (Offset sys), DistanceDimension (Offset sys) ~ HomogenousDimension (Dimensions (Offset sys a)), VectorSpace (Offset sys a), VectorSpace (Vector (Dimensions (Offset sys a)) a)) => Offset sys a -> Direction sys a
 direction o = Direction (V.direction o)
 
-offsetBy :: (Num a) => Direction sys a -> Length a -> Offset sys a
-offsetBy dir dist = Offset . unsafeCoerce . gscale dist . unUnitV . unDirection $ dir
-  -- this unsafeCoerce wouldn't be necessary if we could have appropriate role signatures in the definition of Dimensional
+offsetBy :: (Num a, Representation (CoordinateSystemType sys) ~ MapMul DLength (MapMul (DOne / HomogenousDimension (Dimensions (Offset sys a))) (Dimensions (Offset sys a)) )) => Direction sys a -> Length a -> Offset sys a
+offsetBy dir dist = Offset . gscale dist . unUnitV . unDirection $ dir
+  -- this crazy context wouldn't be necessary if we could have appropriate role signatures in the definition of Dimensional
+  -- or if we had a quite sophisticated solver
 
 {-
 
