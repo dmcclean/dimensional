@@ -1,7 +1,7 @@
 vNext
 -----
-* Breaking: Changed Numeric.Units.Dimensional.Prelude to export a dimensionally
-  typed `recip` instead of the one from `Prelude`.
+* Breaking: Changed Numeric.Units.Dimensional.Prelude to export dimensionally
+  typed `recip` and `logBase` instead of the ones from `Prelude`.
 * Breaking: Changed Numeric.Units.Dimensional.Prelude to export `(.)` and `id`
   from `Control.Category` instead of from `Prelude`.
 * Breaking: Changed the `HasDimension` typeclass to require an instance of the new
@@ -19,6 +19,7 @@ vNext
 * Added a multiplicative `Monoid` instance for `AnyQuantity` and for `AnyUnit`.
 * Added the `DynQuantity` type to represent possibly valid quantities of statically
   unknown dimension, suitable for performing arithmetic with such quantities.
+* Added `nroot` function for term-level dimensions.
 * Relocated git repository to https://github.com/bjornbm/dimensional
 
 1.0.1.1 (2015-11)
