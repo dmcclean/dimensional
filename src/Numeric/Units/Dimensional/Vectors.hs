@@ -498,7 +498,7 @@ instance (VectorSpace (v a)) => AffineSpace (Torsor v a) where
 instance (MetricSpace v) => MetricSpace (Torsor v) where
   type DistanceDimension (Torsor v) = DistanceDimension v
   distance (Torsor x) (Torsor y) = distance x y
-
+  quadrance (Torsor x) (Torsor y) = quadrance x y
 
 -- Unit Vectors
 
@@ -516,6 +516,11 @@ instance (CVectorMono (v a), MonoVectorSpace v, MetricSpace v, DOne ~ DistanceDi
   type Dimensions (UnitV v a) = Dimensions (v a)
   fromListWithLeftovers = fmapOverFirst unitV . fromListWithLeftovers
   toList = toList . unUnitV
+
+instance (MetricSpace v) => MetricSpace (UnitV v) where
+  type DistanceDimension (UnitV v) = DistanceDimension v
+  distance (UnitV x) (UnitV y) = distance x y
+  quadrance (UnitV x) (UnitV y) = quadrance x y
 
 instance Show (v a) => Show (UnitV v a) where
   show = show . unUnitV
