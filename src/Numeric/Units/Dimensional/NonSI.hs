@@ -34,7 +34,7 @@ a conversion function similar to for degrees Celsius.
 
 -}
 
-module Numeric.Units.Dimensional.NonSI 
+module Numeric.Units.Dimensional.NonSI
 (
   -- * Units Defined By Experiment
   -- $values-obtained-experimentally
@@ -44,8 +44,10 @@ module Numeric.Units.Dimensional.NonSI
   gee,
   -- * Inch-pound Units
   -- $inch-pound-units
-  inch, foot, mil, poundMass, ounce, poundForce, slug, psi, yard, mile, nauticalMile, knot,
+  inch, foot, mil, poundMass, ounce, poundForce, horsepower,
+  slug, psi, yard, mile, nauticalMile, knot,
   revolution, solid, teaspoon, acre,
+  btu,
   -- * Years
   -- $year
   year, century,
@@ -117,6 +119,9 @@ ounce     = mkUnitQ (ucum "[oz_av]" "oz" "ounce") (1 Prelude./ 16) $ poundMass
 poundForce :: Fractional a => Unit 'NonMetric DForce a
 poundForce = mkUnitQ (ucum "[lbf_av]" "lbf" "pound force") 1 $ poundMass * gee  -- 4.4482 N
 
+horsepower :: Fractional a => Unit 'NonMetric DPower a
+horsepower = mkUnitQ (ucum "[HP]" "hp" "horsepower") 550 $ foot * poundForce / second
+
 {-
 
 The slug is an alternative unit of mass defined in terms of the pound-force.
@@ -156,6 +161,24 @@ teaspoon :: (Fractional a) => Unit 'NonMetric DVolume a
 teaspoon = mkUnitQ (ucum "[tsp_m]" "tsp" "teaspoon") 5 $ milli liter
 acre :: (Fractional a) => Unit 'NonMetric DArea a
 acre = mkUnitQ (ucum "[acr_us]" "ac" "acre") 43560 $ square foot
+
+-- | One btu is is the 'QuantityOfHeat' required to raise the temperature
+-- of 1 avoirdupois 'poundMass' of liquid water by 1 'degreeFahrenheit' at a constant pressure of one 'atmosphere'.
+--
+-- Because this value must be determined experimentally and varies with temperature, several standardized
+-- values of the btu have arisen. This is the value based on the International Steam Table calorie,
+-- defined by the Fifth International Conference on the Properties of Steam.
+--
+-- See <https://en.wikipedia.org/wiki/British_thermal_unit#Definitions here> for further information.
+--
+-- >>> 1 *~ btu
+-- 1055.05585262 m^2 kg s^-2
+--
+-- >>> 1 *~ btu :: Energy Rational
+-- 52752792631 % 50000000 m^2 kg s^-2
+btu :: Fractional a => Unit 'NonMetric DEnergy a
+btu = mkUnitQ (ucum "[Btu_IT]" "btu" "British thermal unit") 1055.05585262 $ joule
+
 
 {- $year
 
@@ -261,7 +284,7 @@ rad = mkUnitQ (ucumMetric "RAD" "RAD" "RAD") 1 $ centi gray
 stokes :: (Fractional a) => Unit 'Metric DKinematicViscosity a
 stokes = mkUnitQ (ucumMetric "St" "St" "Stokes") 1 $ centi meter ^ pos2 / second
 
-{- $temperature 
+{- $temperature
 These units of temperature are relative. For absolute temperatures, see 'Numeric.Units.Dimensional.SIUnits.fromDegreeCelsiusAbsolute'.
 -}
 degreeFahrenheit :: (Fractional a) => Unit 'NonMetric DThermodynamicTemperature a
