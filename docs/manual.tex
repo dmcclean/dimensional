@@ -441,7 +441,7 @@ Arithmetic on term-level dimensions can be performed using the `*`, `/`, `^`, `r
 
 The dimension of dimensionless values is `dOne`, and `Dimension'` values form a `Monoid` under multiplication.
 
-\section{Dynamic Quantities}
+\section{Dynamic Quantities} \label{dynamic-quantities}
 
 The `AnyQuantity` type represents a quantity whose dimension is only known dynamically. One use of this
 type, for example, is to read dimensional values from a configuration file. In a context where
@@ -618,6 +618,10 @@ provides some of the more commonly used ones with dimensional types.
 Contributions are welcome if users require constants supplied by CODATA which are not included in the library.
 
 \subsection{\packagename{dimensional-parsers} for Parsing Units and Quantities}
+
+The \packagename{dimensional-parsers} package provides parsers (both as parser combinators and as functions from `String` to
+dynamic quantities \ref{dynamic-quantities} and dynamic units \ref{dynamic-units}.
+
 
 \subsection{\packagename{dimensional-th} Template Haskell Conveniences for \thispackage{}}
 
