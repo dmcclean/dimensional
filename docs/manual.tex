@@ -456,11 +456,11 @@ Quantities can be demoted to dynamic quantities, and dynamic quantities can be p
 using the functions below:
 
 \begin{lstlisting}
-demoteQuantity  :: (Demoteable q, Promoteable d) => q a -> d a
-promoteQuantity :: (Demoteable q, Promoteable d) => d a -> Maybe (q a)
+demoteQuantity  :: (Demotable q, Promotable d) => q a -> d a
+promoteQuantity :: (Demotable q, Promotable d) => d a -> Maybe (q a)
 \end{lstlisting}
 
-The `Demoteable` class includes both `Quantity d` and `AnyQuantity`, while the `Promoteable` class includes both
+The `Demotable` class includes both `Quantity d` and `AnyQuantity`, while the `Promotable` class includes both
 `AnyQuantity` and `DynQuantity`. These classes are provided because, in addition to `AnyQuantity`, there is also a more general type, `DynQuantity`.
 While an `AnyQuantity a` value definitely represents a `Quantity` of some dimension, a `DynQuantity a` value may not.
 This is a useful property because it admits complete and well-behaved `Num`, `Fractional`, and `Floating` instances for `DynQuantity`. This allows
@@ -494,8 +494,8 @@ function is available for dynamically applying metric prefixes to units, it will
 Dynamic analogues of `*~` and `/~` allow the use of dynamic units to convert between raw values and dynamic quantities, as:
 
 \begin{lstlisting}
-(*~) :: (Floating a, Promoteable q) =>   a -> AnyUnit -> q a
-(/~) :: (Floating a, Promoteable q) => q a -> AnyUnit -> Maybe a
+(*~) :: (Floating a, Promotable q) =>   a -> AnyUnit -> q a
+(/~) :: (Floating a, Promotable q) => q a -> AnyUnit -> Maybe a
 \end{lstlisting}
 
 Note that `/~` will return `Nothing` if the dimensions of the supplied dynamic quantity do not match those of the
