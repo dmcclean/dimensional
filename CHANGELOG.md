@@ -3,7 +3,7 @@ vNext
 * Breaking: Renamed `Root` type family to `NRoot`. Added `Sqrt` and `Cbrt` type
   synonyms. Added `sqrt` and `cbrt` for term level dimensions.
 * Breaking: Changed Numeric.Units.Dimensional.Prelude to export dimensionally
-  typed `recip` and `logBase` instead of the ones from `Prelude`.
+  typed `signum`, `recip`, and `logBase` instead of the ones from `Prelude`.
 * Breaking: Changed Numeric.Units.Dimensional.Prelude to export `(.)` and `id`
   from `Control.Category` instead of from `Prelude`.
 * Breaking: Changed the `HasDimension` typeclass to require an instance of the new
@@ -33,8 +33,17 @@ vNext
 * Added the Numeric.Units.Dimensional.Float module with convenient wrappers around functions
   from RealFloat and IEEE for inspecting floating point quantities.
 * Added an `AEq` instance for `Quantity`.
+* Exposed the name of an 'AnyUnit' without promoting it to a 'Unit' first.
+* Exposed a way to convert atomic 'UnitName's back into 'NameAtom's.
 * Added the `btu`, a unit of energy.
+* Added the `gauss`, a unit of magnetic flux density.
+* Added the `angstrom`, a unit of length.
 * Relocated git repository to https://github.com/bjornbm/dimensional
+
+1.0.1.2 (2016-05)
+-----------------
+* Support for GHC 8.0.1-rc4, avoiding GHC Trac issue 12026.
+* Added support for stack.
 
 1.0.1.1 (2015-11)
 -----------------
