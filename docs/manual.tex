@@ -248,9 +248,10 @@ The exponentiation operator `^` has type:
 
 \begin{lstlisting}
 (^) :: (Fractional a, KnownTypeInt i,
-        KnownVariant v, KnownVariant (Weaken v)) => Dimensional v d a
-                                                 -> Proxy i
-                                                 -> Dimensional (Weaken v) (d ^ i) a
+        KnownVariant v,
+        KnownVariant (Weaken v)) => Dimensional v d a
+                                 -> Proxy i
+                                 -> Dimensional (Weaken v) (d ^ i) a
 \end{lstlisting}
 
 The type variable `v` is the `Variant` of the input, which must be an instance of `KnownVariant` as before. Again, the type variable `a` is
