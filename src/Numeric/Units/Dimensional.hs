@@ -1,6 +1,7 @@
 {-# OPTIONS_HADDOCK show-extensions #-}
 
 {-# LANGUAGE AutoDeriveTypeable #-}
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveDataTypeable #-}
@@ -9,7 +10,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE MultiParamTypeClasses #-} -- for Vector instances only
 {-# LANGUAGE PatternGuards #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RoleAnnotations #-}
@@ -186,7 +186,7 @@ module Numeric.Units.Dimensional
     -- * Dimensional Arithmetic
     (*~), (/~),
     (^), (^/), (**), (*), (/), (+), (-),
-    negate, abs, recip, nroot, sqrt, cbrt,
+    negate, abs, signum, recip, nroot, sqrt, cbrt,
     -- ** Transcendental Functions
     exp, log, logBase, sin, cos, tan, asin, acos, atan, sinh, cosh, tanh, asinh, acosh, atanh, atan2,
     -- ** Operations on Collections
@@ -235,7 +235,7 @@ import Numeric.Units.Dimensional.Dimensions
 import Numeric.Units.Dimensional.Internal
 import Numeric.Units.Dimensional.UnitNames hiding ((*), (/), (^), weaken, strengthen)
 import qualified Numeric.Units.Dimensional.UnitNames.Internal as Name
-import Numeric.Units.Dimensional.Variants hiding (type (*))
+import Numeric.Units.Dimensional.Variants hiding (type (*), type (/))
 import qualified Numeric.Units.Dimensional.Variants as V
 
 -- Provide a version of length which is compatible with base-4.8's version.
@@ -256,6 +256,7 @@ length = foldl' (\c _ -> c Prelude.+ 1) 0
 -- >>> import Test.QuickCheck.Arbitrary
 -- >>> import Numeric.Units.Dimensional.Prelude
 -- >>> import Numeric.Units.Dimensional.Float
+-- >>> import Numeric.Units.Dimensional.NonSI
 -- >>> instance Arbitrary a => Arbitrary (Quantity d a) where arbitrary = fmap Quantity arbitrary
 
 {-
@@ -311,7 +312,7 @@ exactify :: Unit m d a -> Unit m d ExactPi
 exactify (Unit n e _) = Unit n e e
 
 -- | Forms a 'Quantity' by multipliying a number and a unit.
-(*~) :: Num a => a -> Unit m d a -> Quantity d a
+(*~) :: (Num a) => a -> Unit m d a -> Quantity d a
 x *~ (Unit _ _ y) = Quantity (x Prelude.* y)
 
 -- | Divides a 'Quantity' by a 'Unit' of the same physical dimension, obtaining the
@@ -404,10 +405,13 @@ Multiplication, division and powers apply to both units and quantities.
 --
 -- The intimidating type signature captures the similarity between these operations
 -- and ensures that composite 'Unit's are 'NotPrefixable'.
-(/) :: (KnownVariant v1, KnownVariant v2, KnownVariant (v1 V.* v2), Fractional a) => Dimensional v1 d1 a -> Dimensional v2 d2 a -> Dimensional (v1 V.* v2) (d1 / d2) a
+(/) :: (KnownVariant v1, KnownVariant v2, KnownVariant (v1 V./ v2), Fractional a) => Dimensional v1 d1 a -> Dimensional v2 d2 a -> Dimensional (v1 V./ v2) (d1 / d2) a
 (/) = liftD2 (Prelude./) (Prelude./) (Name./)
 
 -- | Forms the reciprocal of a 'Quantity', which has the reciprocal dimension.
+--
+-- >>> recip $ 47 *~ hertz
+-- 2.127659574468085e-2 s
 recip :: (Fractional a) => Quantity d a -> Quantity (Recip d) a
 recip = liftQ Prelude.recip
 
@@ -453,6 +457,16 @@ negate = liftQ Prelude.negate
 -- | Takes the absolute value of a 'Quantity'.
 abs :: Num a => Quantity d a -> Quantity d a
 abs = liftQ Prelude.abs
+
+-- | Takes the sign of a 'Quantity'. The functions 'abs' and 'signum'
+-- satisy the law that:
+--
+-- > abs x * signum x == x
+--
+-- The sign is either @negate _1@ (negative), @_0@ (zero),
+-- or @_1@ (positive).
+signum :: Num a => Quantity d a -> Dimensionless a
+signum = liftQ Prelude.signum
 
 {-
 Roots of arbitrary (integral) degree. Appears to occasionally be useful
@@ -528,16 +542,25 @@ elements of a functor (e.g. a list).
 xs *~~ u = fmap (*~ u) xs
 
 -- | Applies '/~' to all values in a functor.
-(/~~) :: (Functor f, Fractional a) => f (Quantity d a) -> Unit m d a -> f a
+(/~~) :: forall f m d a.(Functor f, Fractional a) => f (Quantity d a) -> Unit m d a -> f a
 xs /~~ u = fmap (/~ u) xs
 
 infixl 7  *~~, /~~
 
 -- | The sum of all elements in a list.
+--
+-- >>> sum ([] :: [Mass Double])
+-- 0.0 kg
+--
+-- >>> sum [12.4 *~ meter, 1 *~ foot]
+-- 12.7048 m
 sum :: (Num a, Foldable f) => f (Quantity d a) -> Quantity d a
 sum = foldr (+) _0
 
 -- | The arithmetic mean of all elements in a list.
+--
+-- >>> mean [pi, _7]
+-- 5.070796326794897
 mean :: (Fractional a, Foldable f) => f (Quantity d a) -> Quantity d a
 mean = uncurry (/) . foldr accumulate (_0, _0)
   where
@@ -547,11 +570,24 @@ mean = uncurry (/) . foldr accumulate (_0, _0)
 -- This can be useful for purposes of e.g. calculating averages.
 --
 -- >>> dimensionlessLength ["foo", "bar"]
--- 2.0
+-- 2
 dimensionlessLength :: (Num a, Foldable f) => f b -> Dimensionless a
 dimensionlessLength x = (fromIntegral $ length x) *~ one
 
 -- | Returns a list of quantities between given bounds.
+--
+-- prop> n <= 0 ==> nFromTo (x :: Mass Double) (y :: Mass Double) n == [x, y]
+--
+-- prop> (x :: Length Double) <= (y :: Length Double) ==> all (\z -> x <= z && z <= y) (nFromTo x y n)
+--
+-- >>> nFromTo _0 _3 2
+-- [0.0,1.0,2.0,3.0]
+--
+-- >>> nFromTo _1 _0 7
+-- [1.0,0.875,0.75,0.625,0.5,0.375,0.25,0.125,0.0]
+--
+-- >>> nFromTo _0 _1 (-5)
+-- [0.0,1.0]
 nFromTo :: (Fractional a, Integral b) => Quantity d a -- ^ The initial value.
                                       -> Quantity d a -- ^ The final value.
                                       -> b -- ^ The number of intermediate values. If less than one, no intermediate values will result.
@@ -588,11 +624,26 @@ atanh = fmap Prelude.atanh
 (**) = liftQ2 (Prelude.**)
 
 -- | Takes the logarithm of the second argument in the base of the first.
+--
+-- >>> logBase _2 _8
+-- 3.0
 logBase :: Floating a => Dimensionless a -> Dimensionless a -> Dimensionless a
 logBase = liftQ2 Prelude.logBase
 
 -- | The standard two argument arctangent function.
 -- Since it interprets its two arguments in comparison with one another, the input may have any dimension.
+--
+-- >>> atan2 _0 _1
+-- 0.0
+--
+-- >>> atan2 _1 _0
+-- 1.5707963267948966
+--
+-- >>> atan2 _0 (negate _1)
+-- 3.141592653589793
+--
+-- >>> atan2 (negate _1) _0
+-- -1.5707963267948966
 atan2 :: (RealFloat a) => Quantity d a -> Quantity d a -> Dimensionless a
 atan2 = liftQ2 Prelude.atan2
 
@@ -616,9 +667,9 @@ good measure.
 
 -}
 
--- | The constant for zero is polymorphic, allowing
--- it to express zero 'Length' or 'Capacitance' or 'Velocity' etc, in addition
--- to the 'Dimensionless' value zero.
+-- | The constant for zero is polymorphic, allowing it to express zero 'Length' or
+-- 'Numeric.Units.Dimensional.Quantities.Capacitance' or 'Numeric.Units.Dimensional.Quantities.Velocity' etc,
+-- in addition to the 'Dimensionless' value zero.
 _0 :: Num a => Quantity d a
 _0 = Quantity 0
 
@@ -652,6 +703,10 @@ If you feel your work requires this instance, it is provided as an orphan in "Nu
 -}
 
 -- | Convenient conversion between numerical types while retaining dimensional information.
+--
+-- >>> let x = (37 :: Rational) *~ poundMass
+-- >>> changeRep x :: Mass Double
+-- 16.78291769 kg
 changeRep :: (KnownVariant v, Real a, Fractional b) => Dimensional v d a -> Dimensional v d b
 changeRep = dmap realToFrac
 
