@@ -62,9 +62,10 @@ module Numeric.Units.Dimensional.SIUnits
 where
 
 import Control.Monad (join)
-import Data.Ratio
 import Data.List (sortBy, find)
+import Data.Maybe (maybe)
 import Data.Ord (comparing, Down(..))
+import Data.Ratio
 import Numeric.Units.Dimensional
 import Numeric.Units.Dimensional.Quantities
 import Numeric.Units.Dimensional.UnitNames (Prefix, siPrefixes, scaleExponent)
@@ -149,7 +150,10 @@ list of all prefixes defined by the SI.
 --
 -- The appropriate prefix is defined to be the largest prefix such that the resulting value
 -- of the quantity, expressed in the prefixed unit, is greater than or equal to one.
-appropriatePrefix :: (Floating a, RealFrac a) => Unit 'Metric d a -> Quantity d a -> Maybe Prefix
+--
+-- Note that the supplied prefix need not be 'Metric'. This is intended for use to compute a prefix to insert
+-- somewhere in the denominator of a composite (and hence 'NonMetric') unit.
+appropriatePrefix :: (Floating a, RealFrac a) => Unit m d a -> Quantity d a -> Maybe Prefix
 appropriatePrefix u q = selectPrefix (<= e)
   where
     val = q /~ u
@@ -161,7 +165,10 @@ appropriatePrefix u q = selectPrefix (<= e)
 -- The appropriate prefix is defined to be the largest prefix such that the resulting value
 -- of the quantity, expressed in the prefixed unit, is greater than or equal to one. Only those prefixes
 -- whose 'scaleExponent' is a multiple of @3@ are considered.
-appropriatePrefix' :: (Floating a, RealFrac a) => Unit 'Metric d a -> Quantity d a -> Maybe Prefix
+--
+-- Note that the supplied prefix need not be 'Metric'. This is intended for use to compute a prefix to insert
+-- somewhere in the denominator of a composite (and hence 'NonMetric') unit.
+appropriatePrefix' :: (Floating a, RealFrac a) => Unit m d a -> Quantity d a -> Maybe Prefix
 appropriatePrefix' u q = selectPrefix (\x -> x `mod` 3 == 0 && x <= e)
   where
     val = q /~ u
@@ -169,7 +176,7 @@ appropriatePrefix' u q = selectPrefix (\x -> x `mod` 3 == 0 && x <= e)
 
 -- Selects the first prefix in the list of prefix candidates whose scale exponent matches the supplied predicate.
 selectPrefix :: (Int -> Bool) -> Maybe Prefix
-selectPrefix p = join $ fmap snd $ find (p . fst) prefixCandidates
+selectPrefix p = maybe (Just . Prelude.head $ siPrefixes) snd $ find (p . fst) prefixCandidates
 
 -- This is a list of candidate prefixes and the least scale exponent at which each applies.
 prefixCandidates :: [(Int, Maybe Prefix)]
