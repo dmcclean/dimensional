@@ -57,14 +57,14 @@ module Numeric.Units.Dimensional.SIUnits
   -- $submultiples
   deci, centi, milli, micro, nano, pico, femto, atto, zepto, yocto,
   -- $reified-prefixes
-  Prefix, applyPrefix, siPrefixes, appropriatePrefix, withAppropriatePrefix, appropriatePrefix', withAppropriatePrefix'
+  Prefix, applyPrefix, siPrefixes, majorSiPrefixes, appropriatePrefix, withAppropriatePrefix, appropriatePrefix', withAppropriatePrefix'
 )
 where
 
 import Data.Ratio
 import Numeric.Units.Dimensional
 import Numeric.Units.Dimensional.Quantities
-import Numeric.Units.Dimensional.UnitNames (Prefix, PrefixSet, siPrefixes, selectPrefix)
+import Numeric.Units.Dimensional.UnitNames (Prefix, PrefixSet, siPrefixes, majorSiPrefixes, selectPrefix)
 import qualified Numeric.Units.Dimensional.UnitNames as N
 import Numeric.Units.Dimensional.UnitNames.Internal (ucum, ucumMetric)
 import qualified Numeric.Units.Dimensional.UnitNames.Internal as I

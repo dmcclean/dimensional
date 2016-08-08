@@ -41,7 +41,7 @@ simpleUnit = SimpleUnit . weaken
 chooseUnit :: (RealFrac a, Floating a) => PresentationUnit d a -> Quantity d a -> Unit 'NonMetric d a
 chooseUnit (SimpleUnit u)        _ = u
 chooseUnit (PrefixedUnit u)      q = withAppropriatePrefix u q
-chooseUnit (PrefixedUnitMajor u) q = withAppropriatePrefix' u q
+chooseUnit (PrefixedUnitMajor u) q = withAppropriatePrefix' majorSiPrefixes u q
 
 -- | Constructs a 'PresentationFormat' from a showing function and a 'Unit'.
 simpleFormat :: (a -> ShowS) -> Unit m d a -> PresentationFormat d a
