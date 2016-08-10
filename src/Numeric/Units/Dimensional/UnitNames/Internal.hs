@@ -300,8 +300,8 @@ grouped = Grouped . weaken
 -- | An IETF language tag.
 type Language = String
 
-ucumName :: Language
-ucumName = "x-ucum"
+ucumLanguage :: Language
+ucumLanguage = "x-ucum"
 
 siunitx :: Language
 siunitx = "x-siunitx"
@@ -322,41 +322,44 @@ newtype NameAtom (m :: NameAtomType)
 
 instance NFData (NameAtom m) where -- instance is derived from Generic instance
 
-{-
-
-instance HasInterchangeName (UnitName m) where
-  interchangeName One = InterchangeName { name = "1", authority = UCUM, I.isAtomic = True }
-  interchangeName (MetricAtomic a) = interchangeName a
-  interchangeName (Atomic a) = interchangeName a
-  interchangeName (Prefixed p n) = let n' = (name . interchangeName $ p) ++ (name . interchangeName $ n)
-                                       a' = max (authority . interchangeName $ p) (authority . interchangeName $ n)
-                                    in InterchangeName { name = n', authority = a', I.isAtomic = False }
-  interchangeName (Product n1 n2) = let n' = (name . interchangeName $ n1) ++ "." ++ (name . interchangeName $ n2)
-                                        a' = max (authority . interchangeName $ n1) (authority . interchangeName $ n2)
-                                     in InterchangeName { name = n', authority = a', I.isAtomic = False }
-  interchangeName (Quotient n1 n2) = let n' = (name . interchangeName $ n1) ++ "/" ++ (name . interchangeName $ n2)
-                                         a' = max (authority . interchangeName $ n1) (authority . interchangeName $ n2)
-                                      in InterchangeName { name = n', authority = a', I.isAtomic = False }
-  -- TODO #109: note in this case that the UCUM is changing their grammar to not accept exponents after
-  -- as a result it will become necessary to distribute the exponentiation over the items in the base name
-  -- prior to generating the interchange name
-  interchangeName (Power n x) = let n' = (name . interchangeName $ n) ++ (show x)
-                                 in InterchangeName { name = n', authority = authority . interchangeName $ n, I.isAtomic = False }
-  interchangeName (Grouped n) = let n' = "(" ++ (name . interchangeName $ n) ++ ")"
-                                 in InterchangeName { name = n', authority = authority . interchangeName $ n, I.isAtomic = False }
-  interchangeName (Weaken n) = interchangeName n
--}
+ucumName :: (HasUnitName a) => a -> Maybe String
+ucumName = ucumName' . unitName
+  where
+    ucumName' :: UnitName m -> Maybe String
+    ucumName' One = Just "1"
+    ucumName' (MetricAtomic a) = ucumName'' a
+    ucumName' (Atomic a) = ucumName'' a
+    ucumName' (Prefixed p n) = (++) <$> ucumName'' p <*> ucumName' n
+    ucumName' (Product n1 n2) = do
+                                  n1' <- ucumName' n1
+                                  n2' <- ucumName' n2
+                                  return $ n1' ++ "." ++ n2'
+    -- TODO: does one of these subexpressions require a grouping if it is itself a quotient? seems like it must
+    ucumName' (Quotient n1 n2) = do
+                                   n1' <- ucumName' n1
+                                   n2' <- ucumName' n2
+                                   return $ n1' ++ "/" ++ n2'
+    -- TODO #109: note in this case that the UCUM is changing their grammar to not accept exponents after
+    -- as a result it will become necessary to distribute the exponentiation over the items in the base name
+    -- prior to generating the UCUM name
+    ucumName' (Power n x) = do
+                              n' <- ucumName' n
+                              return $ n' ++ show x
+    ucumName' (Grouped n) = (\x -> "(" ++ x ++ ")") <$> ucumName' n
+    ucumName' (Weaken n) = ucumName' n
+    ucumName'' :: NameAtom t -> Maybe String
+    ucumName'' (NameAtom m) = M.lookup ucumLanguage m
 
 prefix :: String -> String -> String -> Rational -> Prefix
 prefix i a f q = Prefix n q
   where
-    n = NameAtom . M.fromList $ [(ucumName, i), (internationalEnglishAbbreviation, a), (internationalEnglish, f)]
+    n = NameAtom . M.fromList $ [(ucumLanguage, i), (internationalEnglishAbbreviation, a), (internationalEnglish, f)]
 
 ucumMetric :: String -> String -> String -> UnitName 'Metric
-ucumMetric i a f = MetricAtomic . NameAtom . M.fromList $ [(ucumName, i), (internationalEnglishAbbreviation, a), (internationalEnglish, f)]
+ucumMetric i a f = MetricAtomic . NameAtom . M.fromList $ [(ucumLanguage, i), (internationalEnglishAbbreviation, a), (internationalEnglish, f)]
 
 ucum :: String -> String -> String -> UnitName 'NonMetric
-ucum i a f = Atomic . NameAtom . M.fromList $ [(ucumName, i), (internationalEnglishAbbreviation, a), (internationalEnglish, f)]
+ucum i a f = Atomic . NameAtom . M.fromList $ [(ucumLanguage, i), (internationalEnglishAbbreviation, a), (internationalEnglish, f)]
 
 -- | Constructs an atomic name for a custom unit.
 atom :: String -- ^ Abbreviated name in international English
