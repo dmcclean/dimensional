@@ -17,6 +17,7 @@
 module Numeric.Units.Dimensional.UnitNames.Internal
 where
 
+import Control.Applicative
 import Control.DeepSeq
 import Control.Monad (join)
 import Data.Coerce
