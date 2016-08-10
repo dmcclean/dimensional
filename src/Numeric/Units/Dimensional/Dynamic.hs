@@ -48,7 +48,6 @@ import Numeric.Units.Dimensional hiding ((*~), (/~), (*), (/), (^), recip, nroot
 import qualified Numeric.Units.Dimensional as Dim
 import Numeric.Units.Dimensional.Coercion
 import Numeric.Units.Dimensional.UnitNames (UnitName, baseUnitName)
-import qualified Numeric.Units.Dimensional.UnitNames.InterchangeNames as I
 import qualified Numeric.Units.Dimensional.UnitNames as N
 import Numeric.Units.Dimensional.Dimensions.TermLevel (HasDynamicDimension(..))
 import qualified Numeric.Units.Dimensional.Dimensions.TermLevel as D
@@ -243,8 +242,8 @@ instance HasDynamicDimension AnyUnit where
 instance HasDimension AnyUnit where
   dimension (AnyUnit d _ _) = d
 
-instance I.HasInterchangeName AnyUnit where
-  interchangeName (AnyUnit _ n _) = I.interchangeName n
+instance N.HasUnitName AnyUnit where
+  unitName (AnyUnit _ n _) = n
 
 -- | 'AnyUnit's form a 'Monoid' under multiplication.
 instance Monoid AnyUnit where

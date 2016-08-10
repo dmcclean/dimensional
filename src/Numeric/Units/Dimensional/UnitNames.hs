@@ -17,7 +17,7 @@ provided by this package, as new features using them are still being developed.
 module Numeric.Units.Dimensional.UnitNames
 (
   -- * Data Types
-  UnitName, NameAtom, Prefix, PrefixName, Metricality(..),
+  UnitName, NameAtom, Prefix, PrefixName, Metricality(..), HasUnitName(..),
   -- * Construction of Unit Names
   atom, applyPrefix, (*), (/), (^), product, reduce, grouped,
   -- * Standard Names

@@ -6,6 +6,7 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE NumDecimals #-}
@@ -25,11 +26,10 @@ import Data.Foldable (toList)
 #else
 import Data.Foldable (Foldable, toList)
 #endif
+import qualified Data.Map.Strict as M
 import Data.Ord
 import GHC.Generics hiding (Prefix)
 import Numeric.Units.Dimensional.Dimensions.TermLevel (Dimension', asList, HasDimension(..))
-import Numeric.Units.Dimensional.UnitNames.InterchangeNames hiding (isAtomic)
-import qualified Numeric.Units.Dimensional.UnitNames.InterchangeNames as I
 import Numeric.Units.Dimensional.Variants (Metricality(..))
 import Prelude hiding ((*), (/), (^), product)
 import qualified Prelude as P
@@ -83,6 +83,24 @@ instance Show (UnitName m) where
   show (Power x n) = show x ++ "^" ++ show n
   show (Grouped n) = "(" ++ show n ++ ")"
   show (Weaken n) = show n
+
+class HasUnitName a where
+  unitName :: a -> UnitName 'NonMetric
+
+instance HasUnitName (UnitName m) where
+  unitName = weaken
+
+instance HasUnitName (NameAtom ('UnitAtom 'Metric)) where
+  unitName = Weaken . MetricAtomic
+
+instance HasUnitName (NameAtom ('UnitAtom 'NonMetric)) where
+  unitName = Atomic
+
+abbreviation_en :: NameAtom m -> String
+abbreviation_en (NameAtom m) = m M.! internationalEnglishAbbreviation
+
+name_en :: NameAtom m -> String
+name_en (NameAtom m) = m M.! internationalEnglish
 
 asAtomic :: UnitName m -> Maybe (NameAtom ('UnitAtom m))
 asAtomic (MetricAtomic a) = Just a
@@ -149,9 +167,6 @@ instance Ord Prefix where
   compare = comparing scaleFactor
 
 instance NFData Prefix where -- instance is derived from Generic instance
-
-instance HasInterchangeName Prefix where
-  interchangeName = interchangeName . prefixName
 
 -- | The name of the unit of dimensionless values.
 nOne :: UnitName 'NonMetric
@@ -282,20 +297,32 @@ relax n = go (typeRep (Proxy :: Proxy m1)) (typeRep (Proxy :: Proxy m2)) n
 grouped :: UnitName m -> UnitName 'NonMetric
 grouped = Grouped . weaken
 
+-- | An IETF language tag.
+type Language = String
+
+ucumName :: Language
+ucumName = "x-ucum"
+
+siunitx :: Language
+siunitx = "x-siunitx"
+
+internationalEnglish :: Language
+internationalEnglish = "en"
+
+usEnglish :: Language
+usEnglish = "en-US"
+
+internationalEnglishAbbreviation :: Language
+internationalEnglishAbbreviation = "en-x-abbrev"
+
 -- | Represents the name of an atomic unit or prefix.
-data NameAtom (m :: NameAtomType)
-  = NameAtom
-  {
-    _interchangeName :: InterchangeName, -- ^ The interchange name of the unit.
-    abbreviation_en :: String, -- ^ The abbreviated name of the unit in international English
-    name_en :: String -- ^ The full name of the unit in international English
-  }
-  deriving (Eq, Ord, Data, Typeable, Generic)
+newtype NameAtom (m :: NameAtomType)
+  = NameAtom (M.Map Language String)
+  deriving (Eq, Data, Typeable, Generic)
 
 instance NFData (NameAtom m) where -- instance is derived from Generic instance
 
-instance HasInterchangeName (NameAtom m) where
-  interchangeName = _interchangeName
+{-
 
 instance HasInterchangeName (UnitName m) where
   interchangeName One = InterchangeName { name = "1", authority = UCUM, I.isAtomic = True }
@@ -318,27 +345,24 @@ instance HasInterchangeName (UnitName m) where
   interchangeName (Grouped n) = let n' = "(" ++ (name . interchangeName $ n) ++ ")"
                                  in InterchangeName { name = n', authority = authority . interchangeName $ n, I.isAtomic = False }
   interchangeName (Weaken n) = interchangeName n
+-}
 
 prefix :: String -> String -> String -> Rational -> Prefix
 prefix i a f q = Prefix n q
   where
-    n = NameAtom (InterchangeName i UCUM True) a f
+    n = NameAtom . M.fromList $ [(ucumName, i), (internationalEnglishAbbreviation, a), (internationalEnglish, f)]
 
 ucumMetric :: String -> String -> String -> UnitName 'Metric
-ucumMetric i a f = MetricAtomic $ NameAtom (InterchangeName i UCUM True) a f
+ucumMetric i a f = MetricAtomic . NameAtom . M.fromList $ [(ucumName, i), (internationalEnglishAbbreviation, a), (internationalEnglish, f)]
 
 ucum :: String -> String -> String -> UnitName 'NonMetric
-ucum i a f = Atomic $ NameAtom (InterchangeName i UCUM True) a f
-
-dimensionalAtom :: String -> String -> String -> UnitName 'NonMetric
-dimensionalAtom i a f = Atomic $ NameAtom (InterchangeName i DimensionalLibrary True) a f
+ucum i a f = Atomic . NameAtom . M.fromList $ [(ucumName, i), (internationalEnglishAbbreviation, a), (internationalEnglish, f)]
 
 -- | Constructs an atomic name for a custom unit.
-atom :: String -- ^ Interchange name
-     -> String -- ^ Abbreviated name in international English
+atom :: String -- ^ Abbreviated name in international English
      -> String -- ^ Full name in international English
      -> UnitName 'NonMetric
-atom i a f = Atomic $ NameAtom (InterchangeName i Custom True) a f
+atom a f = Atomic . NameAtom . M.fromList $ [(internationalEnglishAbbreviation, a), (internationalEnglish, f)]
 
 -- | The type of a unit name transformation that may be associated with an operation that takes a single unit as input.
 type UnitNameTransformer = (forall m.UnitName m -> UnitName 'NonMetric)

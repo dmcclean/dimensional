@@ -44,7 +44,6 @@ import Numeric.Units.Dimensional.Dimensions
 import Numeric.Units.Dimensional.Variants
 import Numeric.Units.Dimensional.UnitNames hiding ((*), (/), (^), weaken, strengthen)
 import qualified Numeric.Units.Dimensional.UnitNames.Internal as Name
-import Numeric.Units.Dimensional.UnitNames.InterchangeNames (HasInterchangeName(..))
 import qualified Data.Vector.Generic.Mutable as M
 import qualified Data.Vector.Generic as G
 import qualified Data.Vector.Unboxed.Base as U
@@ -131,8 +130,8 @@ instance Ord1 (SQuantity s d) where
   liftCompare = coerce
 #endif
 
-instance HasInterchangeName (Unit m d a) where
-  interchangeName (Unit n _ _) = interchangeName n
+instance HasUnitName (Unit m d a) where
+  unitName (Unit n _ _) = unitName n
 
 {-
 Since quantities form a monoid under addition, but not under multiplication unless they are dimensionless,
