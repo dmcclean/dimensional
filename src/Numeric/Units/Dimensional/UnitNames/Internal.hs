@@ -75,15 +75,21 @@ instance NFData (UnitName m) where
     Weaken n' -> rnf n'
 
 instance Show (UnitName m) where
-  show One = "1"
-  show (MetricAtomic a) = abbreviation_en a
-  show (Atomic a) = abbreviation_en a
-  show (Prefixed a n) = abbreviation_en a ++ show n
-  show (Product n1 n2) = show n1 ++ " " ++ show n2
-  show (Quotient n1 n2) = show n1 ++ " / " ++ show n2
-  show (Power x n) = show x ++ "^" ++ show n
-  show (Grouped n) = "(" ++ show n ++ ")"
-  show (Weaken n) = show n
+  show = stringName abbreviation_en
+
+stringName :: (forall t.NameAtom t -> String) -> (forall a.HasUnitName a => a -> String)
+stringName f = go . unitName
+  where
+    go :: UnitName m -> String
+    go One = "1"
+    go (MetricAtomic a) = f a
+    go (Atomic a) = f a
+    go (Prefixed a n) = f a ++ show n
+    go (Product n1 n2) = go n1 ++ " " ++ go n2
+    go (Quotient n1 n2) = go n1 ++ " / " ++ go n2
+    go (Power x n) = go x ++ "^" ++ show n
+    go (Grouped n) = "(" ++ go n ++ ")"
+    go (Weaken n) = go n
 
 class HasUnitName a where
   unitName :: a -> UnitName 'NonMetric
@@ -336,6 +342,7 @@ ucumName = ucumName' . unitName
                                   n2' <- ucumName' n2
                                   return $ n1' ++ "." ++ n2'
     -- TODO: does one of these subexpressions require a grouping if it is itself a quotient? seems like it must
+    -- we did it at construction time, but if we are going to expose the constructors then we need to do it again.
     ucumName' (Quotient n1 n2) = do
                                    n1' <- ucumName' n1
                                    n2' <- ucumName' n2
