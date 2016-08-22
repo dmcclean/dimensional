@@ -364,16 +364,24 @@ prefix i a f q = Prefix n q
     n = NameAtom . M.fromList $ [(ucumLanguage, i), (internationalEnglishAbbreviation, a), (internationalEnglish, f)]
 
 ucumMetric :: String -> String -> String -> UnitName 'Metric
-ucumMetric i a f = MetricAtomic . NameAtom . M.fromList $ [(ucumLanguage, i), (internationalEnglishAbbreviation, a), (internationalEnglish, f)]
+ucumMetric i a f = MetricAtomic $ atom' a f [(ucumLanguage, i)]
 
 ucum :: String -> String -> String -> UnitName 'NonMetric
-ucum i a f = Atomic . NameAtom . M.fromList $ [(ucumLanguage, i), (internationalEnglishAbbreviation, a), (internationalEnglish, f)]
+ucum i a f = Atomic $ atom' a f [(ucumLanguage, i)]
 
 -- | Constructs an atomic name for a custom unit.
 atom :: String -- ^ Abbreviated name in international English
      -> String -- ^ Full name in international English
      -> UnitName 'NonMetric
-atom a f = Atomic . NameAtom . M.fromList $ [(internationalEnglishAbbreviation, a), (internationalEnglish, f)]
+atom a f = Atomic $ atom' a f []
+
+atom' :: String
+      -> String
+      -> [(String, String)]
+      -> NameAtom m
+atom' a f ns = NameAtom $ M.union (M.fromList ns) basic
+  where
+    basic = M.fromList [(internationalEnglishAbbreviation, a), (internationalEnglish, f)]
 
 -- | The type of a unit name transformation that may be associated with an operation that takes a single unit as input.
 type UnitNameTransformer = (forall m.UnitName m -> UnitName 'NonMetric)
