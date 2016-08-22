@@ -20,6 +20,7 @@ where
 import Control.Applicative
 import Control.DeepSeq
 import Control.Monad (join)
+import qualified Data.Char as C
 import Data.Coerce
 import Data.Data hiding (Prefix)
 #if MIN_VERSION_base(4, 8, 0)
@@ -319,11 +320,20 @@ siunitx = "x-siunitx"
 internationalEnglish :: Language
 internationalEnglish = "en"
 
+internationalEnglishAscii :: Language
+internationalEnglishAscii = "en-x-ascii"
+
 usEnglish :: Language
 usEnglish = "en-US"
 
 internationalEnglishAbbreviation :: Language
 internationalEnglishAbbreviation = "en-x-abbrev"
+
+internationalEnglishAsciiAbbreviation :: Language
+internationalEnglishAsciiAbbreviation = "en-x-abbrev-ascii"
+
+isValidAscii :: String -> Bool
+isValidAscii = all (\c -> C.isAscii c && C.isPrint c)
 
 -- | Represents the name of an atomic unit or prefix.
 newtype NameAtom (m :: NameAtomType)
@@ -380,8 +390,10 @@ atom' :: String
       -> String
       -> [(Language, String)]
       -> NameAtom m
-atom' a f ns = NameAtom $ M.union (M.fromList ns) basic
+atom' a f ns = NameAtom $ M.union (M.fromList ns) ascii'
   where
+    ascii' = if (isValidAscii f) then M.insert internationalEnglishAscii f ascii else ascii
+    ascii = if (isValidAscii a) then M.insert internationalEnglishAsciiAbbreviation a basic else basic
     basic = M.fromList [(internationalEnglishAbbreviation, a), (internationalEnglish, f)]
 
 -- | The type of a unit name transformation that may be associated with an operation that takes a single unit as input.
