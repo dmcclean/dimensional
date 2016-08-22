@@ -109,6 +109,9 @@ abbreviation_en (NameAtom m) = m M.! internationalEnglishAbbreviation
 name_en :: NameAtom m -> String
 name_en (NameAtom m) = m M.! internationalEnglish
 
+nameComponent :: Language -> NameAtom m -> Maybe String
+nameComponent l (NameAtom m) = M.lookup l m
+
 asAtomic :: UnitName m -> Maybe (NameAtom ('UnitAtom m))
 asAtomic (MetricAtomic a) = Just a
 asAtomic (Atomic a) = Just a
@@ -334,9 +337,9 @@ ucumName = ucumName' . unitName
   where
     ucumName' :: UnitName m -> Maybe String
     ucumName' One = Just "1"
-    ucumName' (MetricAtomic a) = ucumName'' a
-    ucumName' (Atomic a) = ucumName'' a
-    ucumName' (Prefixed p n) = (++) <$> ucumName'' p <*> ucumName' n
+    ucumName' (MetricAtomic a) = nameComponent ucumLanguage a
+    ucumName' (Atomic a) = nameComponent ucumLanguage a
+    ucumName' (Prefixed p n) = (++) <$> nameComponent ucumLanguage p <*> ucumName' n
     ucumName' (Product n1 n2) = do
                                   n1' <- ucumName' n1
                                   n2' <- ucumName' n2
@@ -355,8 +358,6 @@ ucumName = ucumName' . unitName
                               return $ n' ++ show x
     ucumName' (Grouped n) = (\x -> "(" ++ x ++ ")") <$> ucumName' n
     ucumName' (Weaken n) = ucumName' n
-    ucumName'' :: NameAtom t -> Maybe String
-    ucumName'' (NameAtom m) = M.lookup ucumLanguage m
 
 prefix :: String -> String -> String -> Rational -> Prefix
 prefix i a f q = Prefix n q
@@ -377,7 +378,7 @@ atom a f = Atomic $ atom' a f []
 
 atom' :: String
       -> String
-      -> [(String, String)]
+      -> [(Language, String)]
       -> NameAtom m
 atom' a f ns = NameAtom $ M.union (M.fromList ns) basic
   where
