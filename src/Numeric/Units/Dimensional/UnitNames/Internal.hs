@@ -327,7 +327,7 @@ internationalEnglishAbbreviation = "en-x-abbrev"
 
 -- | Represents the name of an atomic unit or prefix.
 newtype NameAtom (m :: NameAtomType)
-  = NameAtom (M.Map Language String)
+  = NameAtom (M.Map Language String) -- It's an invariant that internationalEnglish and internationalEnglishAbbreviation must appear as keys in the map.
   deriving (Eq, Data, Typeable, Generic)
 
 instance NFData (NameAtom m) where -- instance is derived from Generic instance
