@@ -19,7 +19,7 @@ module Numeric.Units.Dimensional.UnitNames
   -- * Data Types
   UnitName, NameAtom, Prefix, PrefixName, Metricality(..), HasUnitName(..),
   -- * Construction of Unit Names
-  atom, applyPrefix, (*), (/), (^), product, reduce, grouped,
+  atomic, applyPrefix, (*), (/), (^), product, reduce, grouped,
   -- * Standard Names
   baseUnitName, siPrefixes, nOne,
   -- * Inspecting Prefixes

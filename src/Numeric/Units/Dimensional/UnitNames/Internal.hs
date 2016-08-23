@@ -381,10 +381,11 @@ ucum :: String -> String -> String -> UnitName 'NonMetric
 ucum i a f = Atomic $ atom' a f [(ucumLanguage, i)]
 
 -- | Constructs an atomic name for a custom unit.
-atom :: String -- ^ Abbreviated name in international English
-     -> String -- ^ Full name in international English
-     -> UnitName 'NonMetric
-atom a f = Atomic $ atom' a f []
+atomic :: String -- ^ Abbreviated name in international English
+       -> String -- ^ Full name in international English
+       -> [(Language, String)] -- ^ List of unit names in other 'Language's.
+       -> UnitName 'NonMetric
+atomic a f ns = Atomic $ atom' a f ns
 
 atom' :: String
       -> String

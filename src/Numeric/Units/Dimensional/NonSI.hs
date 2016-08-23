@@ -79,7 +79,7 @@ module Numeric.Units.Dimensional.NonSI
 where
 
 import Numeric.Units.Dimensional.Prelude
-import Numeric.Units.Dimensional.UnitNames.Internal (ucumMetric, ucum, atom)
+import Numeric.Units.Dimensional.UnitNames.Internal (ucumMetric, ucum, atomic, siunitx)
 import qualified Prelude
 
 -- $setup
@@ -223,7 +223,7 @@ mile = mkUnitQ (ucum "[mi_i]" "mi" "mile") 5280 $ foot
 -- >>> 1 *~ acre :: Area Rational
 -- 316160658 % 78125 m^2
 acre :: (Fractional a) => Unit 'NonMetric DArea a
-acre = mkUnitQ (atom "ac" "acre") 43560 $ square foot
+acre = mkUnitQ (atomic "ac" "acre" []) 43560 $ square foot
 
 -- | One US survey foot is 1200/3937 'meter'.
 --
@@ -412,7 +412,7 @@ horsepower = mkUnitQ (ucum "[HP]" "hp" "horsepower") 550 $ foot * poundForce / s
 -- >>> 1 *~ slug :: Mass Rational
 -- 8896443230521 % 609600000000 kg
 slug :: Fractional a => Unit 'NonMetric DMass a
-slug = mkUnitQ (atom "slug" "slug") 1 $ poundForce * (second^pos2) / foot
+slug = mkUnitQ (atomic "slug" "slug" []) 1 $ poundForce * (second^pos2) / foot
 
 -- | One psi is a pressure of one 'poundForce' per 'square' 'inch' of area.
 --
@@ -463,10 +463,10 @@ knot = mkUnitQ (ucum "[kt_i]" "kt" "knot") 1 $ nauticalMile / hour
 --
 -- prop> 1 *~ revolution === 360 *~ degree
 revolution :: (Floating a) => Unit 'NonMetric DOne a
-revolution = mkUnitR (atom "rev" "revolution") (2 Prelude.* Prelude.pi) $ radian
+revolution = mkUnitR (atomic "rev" "revolution" []) (2 Prelude.* Prelude.pi) $ radian
 
 solid :: (Floating a) => Unit 'NonMetric DOne a
-solid = mkUnitR (atom "solid" "solid") (4 Prelude.* Prelude.pi) $ steradian
+solid = mkUnitR (atomic "solid" "solid" []) (4 Prelude.* Prelude.pi) $ steradian
 
 teaspoon :: (Fractional a) => Unit 'NonMetric DVolume a
 teaspoon = mkUnitQ (ucum "[tsp_m]" "tsp" "teaspoon") 5 $ milli liter
@@ -519,7 +519,7 @@ year = mkUnitZ (ucum "a_j" "a" "mean Julian year") 31557600 $ second
 -- >>> 1 *~ century :: Time Rational
 -- 3155760000 % 1 s
 century :: Num a => Unit 'NonMetric DTime a
-century = mkUnitZ (atom "cen" "mean Julian century") 100 $ year
+century = mkUnitZ (atomic "cen" "mean Julian century" []) 100 $ year
 
 {- $pressure-units
 It seems that nearly every area of application has its own customary unit for measuring pressure.
@@ -636,7 +636,7 @@ inHg_UCUM = mkUnitQ (ucum "[in_i'Hg]" "in Hg" "inch of mercury") 1 $ mHg * inch 
 -- >>> 1 *~ inHg_NIST :: Pressure Rational
 -- 3386389 % 1000 m^-1 kg s^-2
 inHg_NIST :: (Fractional a) => Unit 'NonMetric DPressure a
-inHg_NIST = mkUnitQ (atom "in Hg" "inch of mercury") 3.386389e3 $ pascal
+inHg_NIST = mkUnitQ (atomic "in Hg" "inch of mercury" []) 3.386389e3 $ pascal
 
 -- | One torr (symbol: Torr) is defined as 1/760 'atmosphere', which is approximately equal to 1 'mmHg'.
 --
@@ -648,7 +648,7 @@ inHg_NIST = mkUnitQ (atom "in Hg" "inch of mercury") 3.386389e3 $ pascal
 -- >>> 1 *~ torr :: Pressure Rational
 -- 20265 % 152 m^-1 kg s^-2
 torr :: (Fractional a) => Unit 'NonMetric DPressure a
-torr = mkUnitQ (atom "Torr" "Torr") (1 Prelude./ 760) $ atmosphere
+torr = mkUnitQ (atomic "Torr" "Torr" [(siunitx, "\torr")]) (1 Prelude./ 760) $ atmosphere
 
 -- | The rad is a deprecated unit of 'AbsorbedDose', defined as
 -- 0.01 'gray'.
@@ -763,7 +763,7 @@ imperialPint = mkUnitQ (ucum "[pt_br]" "pt" "pint") (1 Prelude./ 8) $ imperialGa
 -- >>> 1 *~ imperialCup :: Volume Rational
 -- 454609 % 1600000000 m^3
 imperialCup :: (Fractional a) => Unit 'NonMetric DVolume a
-imperialCup = mkUnitQ (atom "cup" "cup") 0.5 $ imperialPint
+imperialCup = mkUnitQ (atomic "cup" "cup" []) 0.5 $ imperialPint
 
 -- | One imperial gill is one quarter of an 'imperialPint'.
 --
