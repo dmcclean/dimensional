@@ -126,19 +126,6 @@ isAtomic (MetricAtomic _) = True
 isAtomic (Atomic _) = True
 isAtomic _ = False
 
-isAtomic' :: UnitName m -> Bool
-isAtomic' (One) = True
-isAtomic' (MetricAtomic _) = True
-isAtomic' (Atomic _) = True
-isAtomic' (Prefixed _ _) = True
-isAtomic' (Grouped _) = True
-isAtomic' (Weaken n) = isAtomic' n
-isAtomic' _ = False
-
-isAtomicOrProduct :: UnitName m -> Bool
-isAtomicOrProduct (Product _ _) = True
-isAtomicOrProduct n = isAtomic' n
-
 -- reduce by algebraic simplifications
 reduce :: UnitName m -> UnitName m
 reduce (One) = One
@@ -268,13 +255,11 @@ a * b = Product (weaken a) (weaken b)
 
 -- | Form a 'UnitName' by dividing one by another.
 (/) :: UnitName m1 -> UnitName m2 -> UnitName 'NonMetric
-n1 / n2 | isAtomicOrProduct n1 = Quotient (weaken n1) (weaken n2)
-        | otherwise            = Quotient (grouped n1) (weaken n2)
+n1 / n2 = Quotient (weaken n1) (weaken n2)
 
 -- | Form a 'UnitName' by raising a name to an integer power.
 (^) :: UnitName m -> Int -> UnitName 'NonMetric
-x ^ n | isAtomic' x = Power (weaken x) n
-      | otherwise   = Power (grouped x) n
+x ^ n = Power (weaken x) n
 
 -- | Convert a 'UnitName' which may or may not be 'Metric' to one
 -- which is certainly 'NonMetric'.
@@ -318,24 +303,35 @@ grouped = Grouped . weaken
 -- | An IETF language tag.
 type Language = String
 
+-- | The language of unit names standardized by the Unified Code for Units of Measure.
+--
+-- See <http://unitsofmeasure.org/ here> for further information.
 ucum :: Language
 ucum = "x-ucum"
 
+-- | The language of unit names used by the siunitx LaTeX package.
+--
+-- See <https://www.ctan.org/pkg/siunitx here> for further information.
 siunitx :: Language
 siunitx = "x-siunitx"
 
+-- | The English language.
 internationalEnglish :: Language
 internationalEnglish = "en"
 
+-- | The English language, restricted to the ASCII character set.
 internationalEnglishAscii :: Language
 internationalEnglishAscii = "en-x-ascii"
 
+-- | The English language, as used in the United States.
 usEnglish :: Language
 usEnglish = "en-US"
 
+-- | An abbreviation in the English language.
 internationalEnglishAbbreviation :: Language
 internationalEnglishAbbreviation = "en-x-abbrev"
 
+-- | An abbreviation in the English language, restricted to the ASCII character set.
 internationalEnglishAsciiAbbreviation :: Language
 internationalEnglishAsciiAbbreviation = "en-x-abbrev-ascii"
 
