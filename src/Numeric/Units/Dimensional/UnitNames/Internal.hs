@@ -86,8 +86,8 @@ stringName f = go . unitName
     go (Atomic a) = f a
     go (Prefixed a n) = f a ++ show n
     go (Product n1 n2) = go n1 ++ " " ++ go n2
-    go (Quotient n1 n2) = go n1 ++ " / " ++ go n2
-    go (Power x n) = go x ++ "^" ++ show n
+    go (Quotient n1 n2) = go n1 ++ " / " ++ go n2 -- TODO: handle the case where grouping is required
+    go (Power x n) = go x ++ "^" ++ show n -- TODO: handle the case where grouping is required
     go (Grouped n) = "(" ++ go n ++ ")"
     go (Weaken n) = go n
 
