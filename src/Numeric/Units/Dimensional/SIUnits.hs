@@ -159,14 +159,19 @@ The drawback is that we are forced to use 'Fractional'.
 
 gram    :: Fractional a => Unit 'Metric DMass a
 gram    = mkUnitQ I.nGram 1e-3 siUnit
+
 second  :: Num a => Unit 'Metric DTime a
 second  = mkUnitZ I.nSecond 1 siUnit
+
 ampere  :: Num a => Unit 'Metric DElectricCurrent a
 ampere  = mkUnitZ I.nAmpere 1 siUnit
+
 kelvin  :: Num a => Unit 'Metric DThermodynamicTemperature a
 kelvin  = mkUnitZ I.nKelvin 1 siUnit
+
 mole    :: Num a => Unit 'Metric DAmountOfSubstance a
 mole    = mkUnitZ I.nMole 1 siUnit
+
 candela :: Num a => Unit 'Metric DLuminousIntensity a
 candela = mkUnitZ I.nCandela 1 siUnit
 
@@ -186,67 +191,67 @@ steradian = mkUnitZ n 1 siUnit -- meter ^ pos2 * meter ^ neg2
     n = metricAtomic "sr" "sr" "steradian" [(siunitx, "\\steradian")]
 
 hertz :: Num a => Unit 'Metric DFrequency a
-hertz = mkUnitZ n 1 $ siUnit
+hertz = mkUnitZ n 1 siUnit
   where
     n = metricAtomic "Hz" "Hz" "Hertz" [(siunitx, "\\hertz")]
 
 newton :: Num a => Unit 'Metric DForce a
-newton = mkUnitZ n 1 $ siUnit
+newton = mkUnitZ n 1 siUnit
   where
     n = metricAtomic "N" "N" "Newton" [(siunitx, "\\newton")]
 
 pascal :: Num a => Unit 'Metric DPressure a
-pascal = mkUnitZ n 1 $ siUnit
+pascal = mkUnitZ n 1 siUnit
   where
     n = metricAtomic "Pa" "Pa" "Pascal" [(siunitx, "\\pascal")]
 
 joule :: Num a => Unit 'Metric DEnergy a
-joule = mkUnitZ n 1 $ siUnit
+joule = mkUnitZ n 1 siUnit
   where
     n = metricAtomic "J" "J" "Joule" [(siunitx, "\\joule")]
 
 watt :: Num a => Unit 'Metric DPower a
-watt = mkUnitZ n 1 $ siUnit
+watt = mkUnitZ n 1 siUnit
   where
     n = metricAtomic "W" "W" "Watt" [(siunitx, "\\watt")]
 
 coulomb :: Num a => Unit 'Metric DElectricCharge a
-coulomb = mkUnitZ n 1 $ siUnit
+coulomb = mkUnitZ n 1 siUnit
   where
     n = metricAtomic "C" "C" "Coulomb" [(siunitx, "\\coloumb")]
 
 volt :: Num a => Unit 'Metric DElectricPotential a
-volt = mkUnitZ n 1 $ siUnit
+volt = mkUnitZ n 1 siUnit
   where
     n = metricAtomic "V" "V" "Volt" [(siunitx, "\\volt")]
 
 farad :: Num a => Unit 'Metric DCapacitance a
-farad = mkUnitZ n 1 $ siUnit
+farad = mkUnitZ n 1 siUnit
   where
     n = metricAtomic "F" "F" "Farad" [(siunitx, "\\farad")]
 
 ohm :: Num a => Unit 'Metric DElectricResistance a
-ohm = mkUnitZ n 1 $ siUnit
+ohm = mkUnitZ n 1 siUnit
   where
     n = metricAtomic "Ohm" "Ω" "Ohm" [(siunitx, "\\ohm")]
 
 siemens :: Num a => Unit 'Metric DElectricConductance a
-siemens = mkUnitZ n 1 $ siUnit
+siemens = mkUnitZ n 1 siUnit
   where
     n = metricAtomic "S" "S" "Siemens" [(siunitx, "\\siemens")]
 
 weber :: Num a => Unit 'Metric DMagneticFlux a
-weber = mkUnitZ n 1 $ siUnit
+weber = mkUnitZ n 1 siUnit
   where
     n = metricAtomic "Wb" "Wb" "Weber" [(siunitx, "\\weber")]
 
 tesla :: Num a => Unit 'Metric DMagneticFluxDensity a
-tesla = mkUnitZ n 1 $ siUnit
+tesla = mkUnitZ n 1 siUnit
   where
     n = metricAtomic "T" "T" "Tesla" [(siunitx, "\\tesla")]
 
 henry :: Num a => Unit 'Metric DInductance a
-henry = mkUnitZ n 1 $ siUnit
+henry = mkUnitZ n 1 siUnit
   where
     n = metricAtomic "H" "H" "Henry" [(siunitx, "\\henry")]
 
@@ -256,12 +261,12 @@ appear here if we stricly followed table 3).
 -}
 
 lumen :: Num a => Unit 'Metric DLuminousFlux a
-lumen = mkUnitZ n 1 $ siUnit
+lumen = mkUnitZ n 1 siUnit
   where
     n = metricAtomic "lm" "lm" "lumen" [(siunitx, "\\lumen")]
 
 lux :: Num a => Unit 'Metric DIlluminance a
-lux = mkUnitZ n 1 $ siUnit
+lux = mkUnitZ n 1 siUnit
   where
     n = metricAtomic "lx" "lx" "lux" [(siunitx, "\\lux")]
 
@@ -294,22 +299,22 @@ of safeguarding human health.
 -}
 
 becquerel :: Num a => Unit 'Metric DActivity a
-becquerel = mkUnitZ n 1 $ siUnit
+becquerel = mkUnitZ n 1 siUnit
   where
     n = metricAtomic "Bq" "Bq" "Becquerel" [(siunitx, "\\becquerel")]
 
 gray :: Num a => Unit 'Metric DAbsorbedDose a
-gray = mkUnitZ n 1 $ siUnit
+gray = mkUnitZ n 1 siUnit
   where
     n = metricAtomic "Gy" "Gy" "Gray" [(siunitx, "\\gray")]
 
 sievert :: Num a => Unit 'Metric DDoseEquivalent a
-sievert = mkUnitZ n 1 $ siUnit
+sievert = mkUnitZ n 1 siUnit
   where
     n = metricAtomic "Sv" "Sv" "Sievert" [(siunitx, "\\sievert")]
 
 katal :: Num a => Unit 'Metric DCatalyticActivity a
-katal = mkUnitZ n 1 $ siUnit
+katal = mkUnitZ n 1 siUnit
   where
     n = metricAtomic "kat" "kat" "katal" [(siunitx, "\\katal")]
 
@@ -324,17 +329,17 @@ We start with time which we grant exclusive rights to 'minute' and
 'second'.
 -}
 minute, hour, day :: Num a => Unit 'NonMetric DTime a
-minute = mkUnitZ n 60 $ second
+minute = mkUnitZ n 60 second
   where
     n = atomic "min" "minute" [(ucum, "min"),
                                (siunitx, "\\minute")]
 
-hour = mkUnitZ n 60 $ minute
+hour = mkUnitZ n 60 minute
   where
     n = atomic "h" "hour" [(ucum, "h"),
                            (siunitx, "\\hour")]
 
-day = mkUnitZ n 24 $ hour -- Mean solar day.
+day = mkUnitZ n 24 hour -- Mean solar day.
   where
     n = atomic "d" "day" [(ucum, "d"),
                           (siunitx, "\\day")]
@@ -346,17 +351,17 @@ Since 'minute' and 'second' are already in use for time we use
 -}
 
 degree, arcminute, arcsecond :: Floating a => Unit 'NonMetric DPlaneAngle a
-degree = mkUnitR n (Prelude.pi Prelude./ 180) $ radian
+degree = mkUnitR n (Prelude.pi Prelude./ 180) radian
   where
     n = atomic "°" "degree" [(ucum, "deg"),
                              (siunitx, "\\degree")]
 
-arcminute = mkUnitR n (Prelude.recip 60) $ degreeOfArc
+arcminute = mkUnitR n (Prelude.recip 60) degreeOfArc
   where
     n = atomic "'" "arcminute" [(ucum, "'"),
                                 (siunitx, "\\arcminute")]
 
-arcsecond = mkUnitR n (Prelude.recip 60) $ minuteOfArc
+arcsecond = mkUnitR n (Prelude.recip 60) minuteOfArc
   where
     n = atomic "''" "arcsecond" [(ucum, "''"),
                                  (siunitx, "\\arcsecond")]
@@ -383,7 +388,7 @@ litre = mkUnitQ n 1 $ deci meter ^ pos3 -- International English.
 liter = litre             -- American English.
 
 tonne, metricTon :: Num a => Unit 'Metric DMass a
-tonne     = mkUnitZ n 1000 $ siUnit -- Name in original SI text.
+tonne     = mkUnitZ n 1000 siUnit -- Name in original SI text.
   where
     n = metricAtomic "t" "t" "tonne" [(siunitx, "\\tonne"),
                                       (usEnglish, "metric ton")]
@@ -400,7 +405,7 @@ unit of length directly tied to the meter, with a length of exactly
 -}
 
 astronomicalUnit :: Num a => Unit 'NonMetric DLength a
-astronomicalUnit = mkUnitZ n 149597870700 $ meter
+astronomicalUnit = mkUnitZ n 149597870700 meter
   where
     n = atomic "AU" "astronomical unit" [(ucum, "AU"),
                                          (siunitx, "\\astronomicalunit")]
