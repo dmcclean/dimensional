@@ -379,7 +379,7 @@ ucumName = ucumName' . unitName
 prefix :: String -> String -> String -> Rational -> Prefix
 prefix i a f q = Prefix n q
   where
-    n = atom a f [(ucum, i)]
+    n = atom a f [(ucum, i), (siunitx, "\\" : f)]
 
 -- | Constructs an atomic name for a metric unit.
 metricAtomic :: String -- ^ Unit name in the Unified Code for Units of Measure
