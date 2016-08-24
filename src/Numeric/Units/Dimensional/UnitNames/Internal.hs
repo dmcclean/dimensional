@@ -75,7 +75,7 @@ instance NFData (UnitName m) where
     Weaken n' -> rnf n'
 
 instance Show (UnitName m) where
-  show = stringName abbreviation_en
+  show = abbreviation_en
 
 stringName :: (forall t.NameAtom t -> String) -> (forall a.HasUnitName a => a -> String)
 stringName f = go . unitName
@@ -103,27 +103,41 @@ instance HasUnitName (NameAtom ('UnitAtom 'Metric)) where
 instance HasUnitName (NameAtom ('UnitAtom 'NonMetric)) where
   unitName = Atomic
 
-abbreviation_en :: NameAtom m -> String
-abbreviation_en (NameAtom m) = m M.! internationalEnglishAbbreviation
+abbreviation_en :: (HasUnitName a) => a -> String
+abbreviation_en = stringName $ definiteNameComponent internationalEnglishAbbreviation
 
-name_en :: NameAtom m -> String
-name_en (NameAtom m) = m M.! internationalEnglish
+name_en :: (HasUnitName a) => a -> String
+name_en = stringName $ definiteNameComponent internationalEnglish
+
+prefixAbbreviationEnglish :: Prefix -> String
+prefixAbbreviationEnglish = definiteNameComponent internationalEnglishAbbreviation . prefixName
+
+prefixNameEnglish :: Prefix -> String
+prefixNameEnglish = definiteNameComponent internationalEnglish . prefixName
+
+definiteNameComponent :: Language -> NameAtom m -> String
+definiteNameComponent l (NameAtom m) = m M.! l
 
 nameComponent :: Language -> NameAtom m -> Maybe String
 nameComponent l (NameAtom m) = M.lookup l m
 
 isAtomic :: UnitName m -> Bool
-isAtomic (One) = True
 isAtomic (MetricAtomic _) = True
 isAtomic (Atomic _) = True
-isAtomic (Prefixed _ _) = True
-isAtomic (Grouped _) = True
-isAtomic (Weaken n) = isAtomic n
 isAtomic _ = False
+
+isAtomic' :: UnitName m -> Bool
+isAtomic' (One) = True
+isAtomic' (MetricAtomic _) = True
+isAtomic' (Atomic _) = True
+isAtomic' (Prefixed _ _) = True
+isAtomic' (Grouped _) = True
+isAtomic' (Weaken n) = isAtomic' n
+isAtomic' _ = False
 
 isAtomicOrProduct :: UnitName m -> Bool
 isAtomicOrProduct (Product _ _) = True
-isAtomicOrProduct n = isAtomic n
+isAtomicOrProduct n = isAtomic' n
 
 -- reduce by algebraic simplifications
 reduce :: UnitName m -> UnitName m
@@ -259,8 +273,8 @@ n1 / n2 | isAtomicOrProduct n1 = Quotient (weaken n1) (weaken n2)
 
 -- | Form a 'UnitName' by raising a name to an integer power.
 (^) :: UnitName m -> Int -> UnitName 'NonMetric
-x ^ n | isAtomic x = Power (weaken x) n
-      | otherwise  = Power (grouped x) n
+x ^ n | isAtomic' x = Power (weaken x) n
+      | otherwise   = Power (grouped x) n
 
 -- | Convert a 'UnitName' which may or may not be 'Metric' to one
 -- which is certainly 'NonMetric'.
