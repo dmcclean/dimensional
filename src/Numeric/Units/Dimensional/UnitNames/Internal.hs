@@ -372,26 +372,32 @@ ucumName = ucumName' . unitName
 prefix :: String -> String -> String -> Rational -> Prefix
 prefix i a f q = Prefix n q
   where
-    n = NameAtom . M.fromList $ [(ucumLanguage, i), (internationalEnglishAbbreviation, a), (internationalEnglish, f)]
+    n = atom a f [(ucumLanguage, i)]
 
-metricAtomic :: String -> String -> String -> [(Language, String)] -> UnitName 'Metric
-metricAtomic i a f ns = MetricAtomic $ atom' a f ((ucumLanguage, i):ns)
+-- | Constructs an atomic name for a metric unit.
+metricAtomic :: String -- ^ Unit name in the Unified Code for Units of Measure
+             -> String -- ^ Abbreviated name in international English
+             -> String -- ^ Full name in international English
+             -> [(Language, String)] -- ^ List of unit names in other 'Language's.
+             -> UnitName 'Metric
+metricAtomic i a f ns = MetricAtomic $ atom a f ((ucumLanguage, i):ns)
 
 ucum :: String -> String -> String -> UnitName 'NonMetric
 ucum i a f = atomic a f [(ucumLanguage, i)]
 
--- | Constructs an atomic name for a custom unit.
+-- | Constructs an atomic name for a unit.
 atomic :: String -- ^ Abbreviated name in international English
        -> String -- ^ Full name in international English
        -> [(Language, String)] -- ^ List of unit names in other 'Language's.
        -> UnitName 'NonMetric
-atomic a f ns = Atomic $ atom' a f ns
+atomic a f ns = Atomic $ atom a f ns
 
-atom' :: String
-      -> String
-      -> [(Language, String)]
-      -> NameAtom m
-atom' a f ns = NameAtom $ M.union (M.fromList ns) ascii'
+-- | Constructs a 'NameAtom' of some 'NameAtomType'.
+atom :: String -- ^ Abbreviated name in international English
+     -> String -- ^ Full name in international English
+     -> [(Language, String)] -- ^ List of names in other 'Language's.
+     -> NameAtom t
+atom a f ns = NameAtom $ M.union (M.fromList ns) ascii'
   where
     ascii' = if (isValidAscii f) then M.insert internationalEnglishAscii f ascii else ascii
     ascii = if (isValidAscii a) then M.insert internationalEnglishAsciiAbbreviation a basic else basic
