@@ -66,7 +66,7 @@ import Numeric.Units.Dimensional
 import Numeric.Units.Dimensional.Quantities
 import Numeric.Units.Dimensional.UnitNames (Prefix, siPrefixes)
 import qualified Numeric.Units.Dimensional.UnitNames as N
-import Numeric.Units.Dimensional.UnitNames.Internal (ucum, metricAtomic, siunitx, usEnglish)
+import Numeric.Units.Dimensional.UnitNames.Internal (metricAtomic, atomic, siunitx, usEnglish, ucum)
 import qualified Numeric.Units.Dimensional.UnitNames.Internal as I
 import Numeric.NumType.DK.Integers ( pos3 )
 import Prelude ( Eq(..), ($), Num, Fractional, Floating, otherwise, error)
@@ -324,9 +324,20 @@ We start with time which we grant exclusive rights to 'minute' and
 'second'.
 -}
 minute, hour, day :: Num a => Unit 'NonMetric DTime a
-minute = mkUnitZ (ucum "min" "min" "minute") 60 $ second
-hour   = mkUnitZ (ucum "h" "h" "hour")       60 $ minute
-day    = mkUnitZ (ucum "d" "d" "day")        24 $ hour -- Mean solar day.
+minute = mkUnitZ n 60 $ second
+  where
+    n = atomic "min" "minute" [(ucum, "min"),
+                               (siunitx, "\\minute")]
+
+hour = mkUnitZ n 60 $ minute
+  where
+    n = atomic "h" "hour" [(ucum, "h"),
+                           (siunitx, "\\hour")]
+
+day = mkUnitZ n 24 $ hour -- Mean solar day.
+  where
+    n = atomic "d" "day" [(ucum, "d"),
+                          (siunitx, "\\day")]
 
 {- $arc-units
 
@@ -335,9 +346,20 @@ Since 'minute' and 'second' are already in use for time we use
 -}
 
 degree, arcminute, arcsecond :: Floating a => Unit 'NonMetric DPlaneAngle a
-degree    = mkUnitR (ucum "deg" "°" "degree")    (Prelude.pi Prelude./ 180) $ radian
-arcminute = mkUnitR (ucum "'" "'" "arcminute")   (Prelude.recip 60)         $ degreeOfArc
-arcsecond = mkUnitR (ucum "''" "''" "arcsecond") (Prelude.recip 60)         $ minuteOfArc
+degree = mkUnitR n (Prelude.pi Prelude./ 180) $ radian
+  where
+    n = atomic "°" "degree" [(ucum, "deg"),
+                             (siunitx, "\\degree")]
+
+arcminute = mkUnitR n (Prelude.recip 60) $ degreeOfArc
+  where
+    n = atomic "'" "arcminute" [(ucum, "'"),
+                                (siunitx, "\\arcminute")]
+
+arcsecond = mkUnitR n (Prelude.recip 60) $ minuteOfArc
+  where
+    n = atomic "''" "arcsecond" [(ucum, "''"),
+                                 (siunitx, "\\arcsecond")]
 
 {- $arc-units-alternate
 Alternate (longer) forms of the above. In particular 'degreeOfArc'
@@ -378,4 +400,7 @@ unit of length directly tied to the meter, with a length of exactly
 -}
 
 astronomicalUnit :: Num a => Unit 'NonMetric DLength a
-astronomicalUnit = mkUnitZ (ucum "AU" "AU" "astronomical unit") 149597870700 $ meter
+astronomicalUnit = mkUnitZ n 149597870700 $ meter
+  where
+    n = atomic "AU" "astronomical unit" [(ucum, "AU"),
+                                         (siunitx, "\\astronomicalunit")]

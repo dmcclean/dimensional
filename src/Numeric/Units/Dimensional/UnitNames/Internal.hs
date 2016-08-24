@@ -311,8 +311,8 @@ grouped = Grouped . weaken
 -- | An IETF language tag.
 type Language = String
 
-ucumLanguage :: Language
-ucumLanguage = "x-ucum"
+ucum :: Language
+ucum = "x-ucum"
 
 siunitx :: Language
 siunitx = "x-siunitx"
@@ -337,7 +337,7 @@ isValidAscii = all (\c -> C.isAscii c && C.isPrint c)
 
 -- | Represents the name of an atomic unit or prefix.
 newtype NameAtom (m :: NameAtomType)
-  = NameAtom (M.Map Language String) -- It's an invariant that internationalEnglish and internationalEnglishAbbreviation must appear as keys in the map.
+  = NameAtom (M.Map Language String) -- It's an invariant that internationalEnglish and internationalEnglishAbbreviation must appear as keys in the map. If the 'NameAtomType' is a prefix or metric, it must also contain 'ucum' as a key.
   deriving (Eq, Data, Typeable, Generic)
 
 instance NFData (NameAtom m) where -- instance is derived from Generic instance
@@ -347,9 +347,9 @@ ucumName = ucumName' . unitName
   where
     ucumName' :: UnitName m -> Maybe String
     ucumName' One = Just "1"
-    ucumName' (MetricAtomic a) = nameComponent ucumLanguage a
-    ucumName' (Atomic a) = nameComponent ucumLanguage a
-    ucumName' (Prefixed p n) = (++) <$> nameComponent ucumLanguage p <*> ucumName' n
+    ucumName' (MetricAtomic a) = nameComponent ucum a
+    ucumName' (Atomic a) = nameComponent ucum a
+    ucumName' (Prefixed p n) = (++) <$> nameComponent ucum p <*> ucumName' n
     ucumName' (Product n1 n2) = do
                                   n1' <- ucumName' n1
                                   n2' <- ucumName' n2
@@ -372,7 +372,7 @@ ucumName = ucumName' . unitName
 prefix :: String -> String -> String -> Rational -> Prefix
 prefix i a f q = Prefix n q
   where
-    n = atom a f [(ucumLanguage, i)]
+    n = atom a f [(ucum, i)]
 
 -- | Constructs an atomic name for a metric unit.
 metricAtomic :: String -- ^ Unit name in the Unified Code for Units of Measure
@@ -380,10 +380,7 @@ metricAtomic :: String -- ^ Unit name in the Unified Code for Units of Measure
              -> String -- ^ Full name in international English
              -> [(Language, String)] -- ^ List of unit names in other 'Language's.
              -> UnitName 'Metric
-metricAtomic i a f ns = MetricAtomic $ atom a f ((ucumLanguage, i):ns)
-
-ucum :: String -> String -> String -> UnitName 'NonMetric
-ucum i a f = atomic a f [(ucumLanguage, i)]
+metricAtomic i a f ns = MetricAtomic $ atom a f ((ucum, i):ns)
 
 -- | Constructs an atomic name for a unit.
 atomic :: String -- ^ Abbreviated name in international English
