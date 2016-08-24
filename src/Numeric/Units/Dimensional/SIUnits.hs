@@ -66,7 +66,7 @@ import Numeric.Units.Dimensional
 import Numeric.Units.Dimensional.Quantities
 import Numeric.Units.Dimensional.UnitNames (Prefix, siPrefixes)
 import qualified Numeric.Units.Dimensional.UnitNames as N
-import Numeric.Units.Dimensional.UnitNames.Internal (ucum, ucumMetric)
+import Numeric.Units.Dimensional.UnitNames.Internal (ucum, metricAtomic, siunitx)
 import qualified Numeric.Units.Dimensional.UnitNames.Internal as I
 import Numeric.NumType.DK.Integers ( pos3 )
 import Prelude ( Eq(..), ($), Num, Fractional, Floating, otherwise, error)
@@ -176,35 +176,35 @@ radian and steradian.
 -}
 
 radian :: Num a => Unit 'Metric DPlaneAngle a
-radian = mkUnitZ (ucumMetric "rad" "rad" "radian") 1 siUnit -- meter * meter ^ neg1
+radian = mkUnitZ (metricAtomic "rad" "rad" "radian" "\\radian") 1 siUnit -- meter * meter ^ neg1
 steradian :: Num a => Unit 'Metric DSolidAngle a
-steradian = mkUnitZ (ucumMetric "sr" "sr" "steradian") 1 siUnit -- meter ^ pos2 * meter ^ neg2
+steradian = mkUnitZ (metricAtomic "sr" "sr" "steradian" "\\steradian") 1 siUnit -- meter ^ pos2 * meter ^ neg2
 hertz :: Num a => Unit 'Metric DFrequency a
-hertz = mkUnitZ (ucumMetric "Hz" "Hz" "Hertz") 1 $ siUnit
+hertz = mkUnitZ (metricAtomic "Hz" "Hz" "Hertz" "\\hertz") 1 $ siUnit
 newton :: Num a => Unit 'Metric DForce a
-newton = mkUnitZ (ucumMetric "N" "N" "Newton") 1 $ siUnit
+newton = mkUnitZ (metricAtomic "N" "N" "Newton" "\\newton") 1 $ siUnit
 pascal :: Num a => Unit 'Metric DPressure a
-pascal = mkUnitZ (ucumMetric "Pa" "Pa" "Pascal") 1 $ siUnit
+pascal = mkUnitZ (metricAtomic "Pa" "Pa" "Pascal" "\\pascal") 1 $ siUnit
 joule :: Num a => Unit 'Metric DEnergy a
-joule = mkUnitZ (ucumMetric "J" "J" "Joule") 1 $ siUnit
+joule = mkUnitZ (metricAtomic "J" "J" "Joule" "\\joule") 1 $ siUnit
 watt :: Num a => Unit 'Metric DPower a
-watt = mkUnitZ (ucumMetric "W" "W" "Watt") 1 $ siUnit
+watt = mkUnitZ (metricAtomic "W" "W" "Watt" "\\watt") 1 $ siUnit
 coulomb :: Num a => Unit 'Metric DElectricCharge a
-coulomb = mkUnitZ (ucumMetric "C" "C" "Coulomb") 1 $ siUnit
+coulomb = mkUnitZ (metricAtomic "C" "C" "Coulomb" "\\coloumb") 1 $ siUnit
 volt :: Num a => Unit 'Metric DElectricPotential a
-volt = mkUnitZ (ucumMetric "V" "V" "Volt") 1 $ siUnit
+volt = mkUnitZ (metricAtomic "V" "V" "Volt" "\\volt") 1 $ siUnit
 farad :: Num a => Unit 'Metric DCapacitance a
-farad = mkUnitZ (ucumMetric "F" "F" "Farad") 1 $ siUnit
+farad = mkUnitZ (metricAtomic "F" "F" "Farad" "\\farad") 1 $ siUnit
 ohm :: Num a => Unit 'Metric DElectricResistance a
-ohm = mkUnitZ (ucumMetric "Ohm" "Ω" "Ohm") 1 $ siUnit
+ohm = mkUnitZ (metricAtomic "Ohm" "Ω" "Ohm" "\\ohm") 1 $ siUnit
 siemens :: Num a => Unit 'Metric DElectricConductance a
-siemens = mkUnitZ (ucumMetric "S" "S" "Siemens") 1 $ siUnit
+siemens = mkUnitZ (metricAtomic "S" "S" "Siemens" "\\siemens") 1 $ siUnit
 weber :: Num a => Unit 'Metric DMagneticFlux a
-weber = mkUnitZ (ucumMetric "Wb" "Wb" "Weber") 1 $ siUnit
+weber = mkUnitZ (metricAtomic "Wb" "Wb" "Weber" "\\weber") 1 $ siUnit
 tesla :: Num a => Unit 'Metric DMagneticFluxDensity a
-tesla = mkUnitZ (ucumMetric "T" "T" "Tesla") 1 $ siUnit
+tesla = mkUnitZ (metricAtomic "T" "T" "Tesla" "\\tesla") 1 $ siUnit
 henry :: Num a => Unit 'Metric DInductance a
-henry = mkUnitZ (ucumMetric "H" "H" "Henry") 1 $ siUnit
+henry = mkUnitZ (metricAtomic "H" "H" "Henry" "\\henry") 1 $ siUnit
 
 {-
 We defer the definition of Celcius temperature to another section (would
@@ -212,9 +212,9 @@ appear here if we stricly followed table 3).
 -}
 
 lumen :: Num a => Unit 'Metric DLuminousFlux a
-lumen = mkUnitZ (ucumMetric "lm" "lm" "lumen") 1 $ siUnit
+lumen = mkUnitZ (metricAtomic "lm" "lm" "lumen" "\\lumen") 1 $ siUnit
 lux :: Num a => Unit 'Metric DIlluminance a
-lux = mkUnitZ (ucumMetric "lx" "lx" "lux") 1 $ siUnit
+lux = mkUnitZ (metricAtomic "lx" "lx" "lux" "\\lux") 1 $ siUnit
 
 {- $celsius
 A problematic area is units which increase proportionally to the
@@ -245,13 +245,13 @@ of safeguarding human health.
 -}
 
 becquerel :: Num a => Unit 'Metric DActivity a
-becquerel = mkUnitZ (ucumMetric "Bq" "Bq" "Becquerel") 1 $ siUnit
+becquerel = mkUnitZ (metricAtomic "Bq" "Bq" "Becquerel" "\\becquerel") 1 $ siUnit
 gray :: Num a => Unit 'Metric DAbsorbedDose a
-gray = mkUnitZ (ucumMetric "Gy" "Gy" "Gray") 1 $ siUnit
+gray = mkUnitZ (metricAtomic "Gy" "Gy" "Gray" "\\gray") 1 $ siUnit
 sievert :: Num a => Unit 'Metric DDoseEquivalent a
-sievert = mkUnitZ (ucumMetric "Sv" "Sv" "Sievert") 1 $ siUnit
+sievert = mkUnitZ (metricAtomic "Sv" "Sv" "Sievert" "\\sievert") 1 $ siUnit
 katal :: Num a => Unit 'Metric DCatalyticActivity a
-katal = mkUnitZ (ucumMetric "kat" "kat" "katal") 1 $ siUnit
+katal = mkUnitZ (metricAtomic "kat" "kat" "katal" "\\katal") 1 $ siUnit
 
 {- $accepted-units
 There are several units that are not strictly part of the SI but
@@ -294,11 +294,11 @@ hectare :: Fractional a => Unit 'NonMetric DArea a
 hectare = square (hecto meter)
 
 litre, liter :: Fractional a => Unit 'Metric DVolume a
-litre = mkUnitQ (ucumMetric "L" "L" "litre") 1 $ deci meter ^ pos3 -- International English.
+litre = mkUnitQ (metricAtomic "L" "L" "litre" "\\litre") 1 $ deci meter ^ pos3 -- International English.
 liter = litre             -- American English.
 
 tonne, metricTon :: Num a => Unit 'Metric DMass a
-tonne     = mkUnitZ (ucumMetric "t" "t" "tonne") 1000 $ siUnit -- Name in original SI text.
+tonne     = mkUnitZ (metricAtomic "t" "t" "tonne" "\\tonne") 1000 $ siUnit -- Name in original SI text.
 metricTon = tonne                   -- American name.
 
 {- $values-obtained-experimentally

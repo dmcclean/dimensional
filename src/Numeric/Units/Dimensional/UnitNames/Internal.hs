@@ -184,28 +184,28 @@ nOne :: UnitName 'NonMetric
 nOne = One
 
 nMeter :: UnitName 'Metric
-nMeter = ucumMetric "m" "m" "metre"
+nMeter = metricAtomic "m" "m" "metre" "\\metre"
 
 nGram :: UnitName 'Metric
-nGram = ucumMetric "g" "g" "gram"
+nGram = metricAtomic "g" "g" "gram" "\\gram"
 
 nKilogram :: UnitName 'NonMetric
 nKilogram = applyPrefix kilo nGram
 
 nSecond :: UnitName 'Metric
-nSecond = ucumMetric "s" "s" "second"
+nSecond = metricAtomic "s" "s" "second" "\\second"
 
 nAmpere :: UnitName 'Metric
-nAmpere = ucumMetric "A" "A" "Ampere"
+nAmpere = metricAtomic "A" "A" "Ampere" "\\ampere"
 
 nKelvin :: UnitName 'Metric
-nKelvin = ucumMetric "K" "K" "Kelvin"
+nKelvin = metricAtomic "K" "K" "Kelvin" "\\kelvin"
 
 nMole :: UnitName 'Metric
-nMole = ucumMetric "mol" "mol" "mole"
+nMole = metricAtomic "mol" "mol" "mole" "\\mole"
 
 nCandela :: UnitName 'Metric
-nCandela = ucumMetric "cd" "cd" "candela"
+nCandela = metricAtomic "cd" "cd" "candela" "\\candela"
 
 -- | The name of the base unit associated with a specified dimension.
 baseUnitName :: Dimension' -> UnitName 'NonMetric
@@ -374,11 +374,11 @@ prefix i a f q = Prefix n q
   where
     n = NameAtom . M.fromList $ [(ucumLanguage, i), (internationalEnglishAbbreviation, a), (internationalEnglish, f)]
 
-ucumMetric :: String -> String -> String -> UnitName 'Metric
-ucumMetric i a f = MetricAtomic $ atom' a f [(ucumLanguage, i)]
+metricAtomic :: String -> String -> String -> String -> UnitName 'Metric
+metricAtomic i a f si = MetricAtomic $ atom' a f [(ucumLanguage, i), (siunitx, si)]
 
 ucum :: String -> String -> String -> UnitName 'NonMetric
-ucum i a f = Atomic $ atom' a f [(ucumLanguage, i)]
+ucum i a f = atomic a f [(ucumLanguage, i)]
 
 -- | Constructs an atomic name for a custom unit.
 atomic :: String -- ^ Abbreviated name in international English

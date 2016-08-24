@@ -79,7 +79,7 @@ module Numeric.Units.Dimensional.NonSI
 where
 
 import Numeric.Units.Dimensional.Prelude
-import Numeric.Units.Dimensional.UnitNames.Internal (ucumMetric, ucum, atomic, siunitx)
+import Numeric.Units.Dimensional.UnitNames.Internal (ucum, atomic, metricAtomic, siunitx)
 import qualified Prelude
 
 -- $setup
@@ -104,13 +104,13 @@ had a combined uncertainty of 0.0000010e-27 kg.
 -}
 
 electronVolt :: Floating a => Unit 'Metric DEnergy a
-electronVolt = mkUnitR (ucumMetric "eV" "eV" "electron volt") 1.60217733e-19 $ joule
+electronVolt = mkUnitR (metricAtomic "eV" "eV" "electron volt" "\\electronvolt") 1.60217733e-19 $ joule
 
 unifiedAtomicMassUnit :: Floating a => Unit 'Metric DMass a
-unifiedAtomicMassUnit = mkUnitR (ucumMetric "u" "u" "atomic mass unit") 1.6605402e-27 $ kilo gram
+unifiedAtomicMassUnit = mkUnitR (metricAtomic "u" "u" "atomic mass unit" "\\atomicmassunit") 1.6605402e-27 $ kilo gram
 
 dalton :: Floating a => Unit 'Metric DMass a
-dalton = mkUnitR (ucumMetric "u" "Da" "Dalton") 1 $ unifiedAtomicMassUnit
+dalton = mkUnitR (metricAtomic "u" "Da" "Dalton" "\\dalton") 1 $ unifiedAtomicMassUnit
 
 -- | One gee is the standard value of the acceleration due to gravity at the
 -- Earth's surface, as standardized by CIPM.
@@ -126,7 +126,7 @@ dalton = mkUnitR (ucumMetric "u" "Da" "Dalton") 1 $ unifiedAtomicMassUnit
 -- >>> 1 *~ gee :: Acceleration Rational
 -- 196133 % 20000 m s^-2
 gee :: Fractional a => Unit 'Metric DAcceleration a
-gee = mkUnitQ (ucumMetric "[g]" "g" "gee") 9.80665 $ meter / second ^ pos2
+gee = mkUnitQ (metricAtomic "[g]" "g" "gee" undefined) 9.80665 $ meter / second ^ pos2
 
 {- $inch-pound-units
 Some US customary (that is, inch-pound) units.
@@ -538,7 +538,7 @@ We include some of the common ones here. 'psi' was defined earlier.
 -- >>> 1 *~ bar :: Pressure Rational
 -- 100000 % 1 m^-1 kg s^-2
 bar :: (Num a) => Unit 'Metric DPressure a
-bar = mkUnitZ (ucumMetric "bar" "bar" "bar") 1e5 $ pascal
+bar = mkUnitZ (metricAtomic "bar" "bar" "bar" "\\bar") 1e5 $ pascal
 
 -- | The "standard atmosphere".
 --
@@ -591,7 +591,7 @@ mmHg :: (Fractional a) => Unit 'NonMetric DPressure a
 mmHg = milli mHg
 
 mHg :: (Fractional a) => Unit 'Metric DPressure a
-mHg = mkUnitQ (ucumMetric "m[Hg]" "m Hg" "meter of mercury") 133.3220 $ kilo pascal
+mHg = mkUnitQ (metricAtomic "m[Hg]" "m Hg" "meter of mercury" undefined) 133.3220 $ kilo pascal
 
 -- | The conventional value for the pressure exerted by a 1 inch high column of mercury.
 --
@@ -661,7 +661,7 @@ torr = mkUnitQ (atomic "Torr" "Torr" [(siunitx, "\torr")]) (1 Prelude./ 760) $ a
 -- >>> 1 *~ rad :: AbsorbedDose Rational
 -- 1 % 100 m^2 s^-2
 rad :: (Fractional a) => Unit 'Metric DAbsorbedDose a
-rad = mkUnitQ (ucumMetric "RAD" "RAD" "RAD") 1 $ centi gray
+rad = mkUnitQ (metricAtomic "RAD" "RAD" "RAD" undefined) 1 $ centi gray
 
 -- | One Stokes is a unit of 'KinematicViscosity' equal to @1 cm^2 / s@.
 --
@@ -673,7 +673,7 @@ rad = mkUnitQ (ucumMetric "RAD" "RAD" "RAD") 1 $ centi gray
 -- >>> 1 *~ stokes :: KinematicViscosity Rational
 -- 1 % 10000 m^2 s^-1
 stokes :: (Fractional a) => Unit 'Metric DKinematicViscosity a
-stokes = mkUnitQ (ucumMetric "St" "St" "Stokes") 1 $ centi meter ^ pos2 / second
+stokes = mkUnitQ (metricAtomic "St" "St" "Stokes" undefined) 1 $ centi meter ^ pos2 / second
 
 {- $temperature
 These units of temperature are relative. For absolute temperatures, see 'Numeric.Units.Dimensional.SIUnits.fromDegreeCelsiusAbsolute'.
