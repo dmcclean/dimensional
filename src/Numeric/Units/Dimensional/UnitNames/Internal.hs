@@ -21,7 +21,6 @@ import Control.Applicative
 import Control.DeepSeq
 import Control.Monad (join)
 import qualified Data.Char as C
-import Data.Coerce
 import Data.Data hiding (Prefix)
 #if MIN_VERSION_base(4, 8, 0)
 import Data.Foldable (toList)
@@ -112,12 +111,6 @@ name_en (NameAtom m) = m M.! internationalEnglish
 
 nameComponent :: Language -> NameAtom m -> Maybe String
 nameComponent l (NameAtom m) = M.lookup l m
-
-asAtomic :: UnitName m -> Maybe (NameAtom ('UnitAtom m))
-asAtomic (MetricAtomic a) = Just a
-asAtomic (Atomic a) = Just a
-asAtomic (Weaken n) = fmap coerce $ asAtomic n
-asAtomic _ = Nothing
 
 isAtomic :: UnitName m -> Bool
 isAtomic (One) = True

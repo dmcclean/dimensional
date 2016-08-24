@@ -28,7 +28,7 @@ module Numeric.Units.Dimensional.UnitNames
   UnitNameTransformer, UnitNameTransformer2,
   -- * Forgetting Unwanted Phantom Types
   weaken, strengthen, relax,
-  name_en, abbreviation_en, asAtomic
+  name_en, abbreviation_en
 )
 where
 
