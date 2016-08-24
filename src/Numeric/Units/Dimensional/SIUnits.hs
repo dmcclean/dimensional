@@ -378,7 +378,9 @@ secondOfArc = arcsecond
 minuteOfArc = arcminute
 
 hectare :: Fractional a => Unit 'NonMetric DArea a
-hectare = square (hecto meter)
+hectare = mkUnitQ n 1 $ square (hecto meter)
+  where
+    n = atomic "ha" "hectare" [(siunitx, "\\hectare")]
 
 litre, liter :: Fractional a => Unit 'Metric DVolume a
 litre = mkUnitQ n 1 $ deci meter ^ pos3 -- International English.
