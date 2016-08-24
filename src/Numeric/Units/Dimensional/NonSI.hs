@@ -480,7 +480,8 @@ psi = mkUnitQ n 1 $ poundForce / inch ^ pos2
 nauticalMile :: (Num a) => Unit 'NonMetric DLength a
 nauticalMile = mkUnitZ n 1852 $ meter
   where
-    n = atomic "NM" "nautical mile" [(ucum, "[nmi_i]")]
+    n = atomic "NM" "nautical mile" [(ucum, "[nmi_i]"),
+                                     (siunitx, "\\nauticalmile")]
 
 -- | One knot is a velocity equal to one 'nauticalMile' per 'hour'.
 --
@@ -962,6 +963,7 @@ angstrom :: (Fractional a) => Unit 'NonMetric DLength a
 angstrom = mkUnitQ n 0.1 $ nano meter
   where
     n = atomic "Å" "Ångström" [(ucum, "Ao"),
+                               (siunitx, "\\angstrom"),
                                (internationalEnglishAscii, "Angstrom")]
 
 -- | One Gauss is 1/10000 'tesla'.
