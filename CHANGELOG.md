@@ -21,7 +21,9 @@ vNext
   `(Num a, Foldable f) => f b -> Dimensionless a`. This provides a weaker constraint on the type `a`
   and may result in ambiguous types in code that depends on the former less general type.
 * Fixed a bug in the definition of the `inHg_NIST`.
+* Fixed a bug in the interchange name of the Dalton.
 * Added units for the US survey foot, yard, inch, mil, and mile.
+* Added the short ton as a unit of mass.
 * Clarified that the UCUM acre is based on the US survey foot.
 * Added a version of the acre based on the international foot.
 * Added `Data`, `Generic`, `Typeable` and `NFData` instances for many ancillary types.
@@ -35,6 +37,7 @@ vNext
 * Added the Numeric.Units.Dimensional.Float module with convenient wrappers around functions
   from RealFloat and IEEE for inspecting floating point quantities.
 * Added an `AEq` instance for `Quantity`.
+* Added `Eq1` and `Ord1` instances for `Quantity`.
 * Exposed the name of an 'AnyUnit' without promoting it to a 'Unit' first.
 * Exposed a way to convert atomic 'UnitName's back into 'NameAtom's.
 * Added the `btu`, a unit of energy.
