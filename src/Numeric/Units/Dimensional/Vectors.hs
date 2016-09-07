@@ -29,7 +29,7 @@ module Numeric.Units.Dimensional.Vectors
   -- * Affine Spaces
 , AffineSpace(..), (.-^)
   -- * Metric Spaces
-, MetricSpace(..), lengthV
+, MetricSpace(..), lengthV, normalize
   -- ** Unit Vectors
 , UnitV(..), unitV
   -- ** Direction Vectors
@@ -86,16 +86,16 @@ instance (d ~ HomogenousDimension ds) => DimensionallyHomogenous (d ': ds) where
 class CVectorMono (v :: *) where
   -- | A list of the 'Dimension' of each element in a vector-like type.
   type Dimensions v :: [Dimension]
-  -- | Construct a representationally-heterogenous vector-like type from a list of 'AnyQuantity' values, if sufficiently many
+  -- | Construct a representationally-heterogenous vector-like type from a list of 'Promotable' values, if sufficiently many
   -- values are available and their dimensions match the 'Dimensions' of the vector-like type. Return the
   -- result, if any, along with a list of any remaining values in the input list.
   --
   -- Clients are likely to prefer 'fromList', but this type is needed for implementation.
-  fromListWithLeftovers :: Real b => [AnyQuantity b] -> (Maybe v, [AnyQuantity b])
-  -- | Convert a representationally-heterogenous vector-like type to a list of 'AnyQuantity' values.
+  fromListWithLeftovers :: (Promotable p, Real b) => [p b] -> (Maybe v, [p b])
+  -- | Convert a representationally-heterogenous vector-like type to a list of 'Promotable' values.
   --
   -- The length and dimensions of the result list must match the 'Dimensions' of the vector-like type.
-  toList :: Fractional a => v -> [AnyQuantity a]
+  toList :: (Promotable p, Fractional a) => v -> [p a]
   -- | Convert a representationally-heterogenous vector-like type to a 'Vector' of the same 'Dimensions'.
   asVector :: forall a.(Real a, Fractional a, VectorSpace (Vector (Dimensions v) a)) => v -> Vector (Dimensions v) a
   asVector = fromJust . fromList . (toList :: v -> [AnyQuantity a])
@@ -113,10 +113,10 @@ class (CVectorMono v) => VectorSpace (v :: *) where
 
 infixl 6 ^+^, ^-^
 
--- | Construct a representationally-heterogenous vector-like type from a list of 'AnyQuantity' values, if precisely as many
+-- | Construct a representationally-heterogenous vector-like type from a list of 'Promotable' values, if precisely as many
 -- values are available as are required and their dimensions match the 'Dimensions' of the vector-like type. Return 'Nothing'
 -- if these conditions are not met.
-fromList :: (VectorSpace v, Real b) => [AnyQuantity b] -> Maybe v
+fromList :: (Promotable p, VectorSpace v, Real a) => [p a] -> Maybe v
 fromList xs | (result, []) <- fromListWithLeftovers xs = result
             | otherwise = Nothing
 
@@ -126,25 +126,25 @@ fromList xs | (result, []) <- fromListWithLeftovers xs = result
 -- may be instances of 'CVector'. In that sense the use of "vector" here is more aligned with its usual
 -- meaning in computer science than with its usual meaning in mathematics.
 class CVector (v :: * -> *) where
-  -- | Construct a representationally-homogenous vector-like type from a list of 'AnyQuantity' values, if sufficiently many
+  -- | Construct a representationally-homogenous vector-like type from a list of 'Promotable' values, if sufficiently many
   -- values are available and their dimensions match the 'Dimensions' of the vector-like type. Return the
   -- result, if any, along with a list of any remaining values in the input list.
   --
   -- Clients are likely to prefer 'fromMonoList', but this type is needed for implementation.
-  fromMonoListWithLeftovers :: [AnyQuantity a] -> (Maybe (v a), [AnyQuantity a])
-  -- | Convert a representationally-homogenous vector-like type to a list of 'AnyQuantity' values.
+  fromMonoListWithLeftovers :: (Promotable p) => [p a] -> (Maybe (v a), [p a])
+  -- | Convert a representationally-homogenous vector-like type to a list of 'Promotable' values.
   --
   -- The length and dimensions of the result list must match the 'Dimensions' of the vector-like type.
-  toMonoList :: v a -> [AnyQuantity a]
+  toMonoList :: (Promotable p) => v a -> [p a]
 
 -- scale really shouldn't be here, because this might be an affine type
 class (CVector v) => MonoVectorSpace (v :: * -> *) where
   scale :: (Num a) => Dimensionless a -> v a -> v a
 
--- | Construct a representationally-homogenous vector-like type from a list of 'AnyQuantity' values, if precisely as many
+-- | Construct a representationally-homogenous vector-like type from a list of 'Promotable' values, if precisely as many
 -- values are available as are required and their dimensions match the 'Dimensions' of the vector-like type. Return 'Nothing'
 -- if these conditions are not met.
-fromMonoList :: (MonoVectorSpace v) => [AnyQuantity a] -> Maybe (v a)
+fromMonoList :: (Promotable p, MonoVectorSpace v) => [p a] -> Maybe (v a)
 fromMonoList xs | (result, []) <- fromMonoListWithLeftovers xs = result
                 | otherwise = Nothing
 
@@ -332,7 +332,7 @@ instance Show (Vector '[] a) where
 instance (Show a, Real a, Fractional a, KnownDimension d, MonoVectorSpace (Vector ds)) => Show (Vector (d ': ds) a) where
   show v = "<| " ++ elems v ++ " |>"
     where
-      elems = intercalate ", " . fmap show . toMonoList
+      elems = intercalate ", " . fmap show . (\x -> x :: [AnyQuantity a]) . toMonoList
 
 -- | In a 'MetricSpace' that is also a 'VectorSpace' the 'lengthV' of a vector is its 'distance' from the zero vector, 'zeroV'.
 lengthV :: (VectorSpace (v a), MetricSpace v, Floating a) => v a -> Quantity (DistanceDimension v) a
