@@ -97,8 +97,12 @@ class CVectorMono (v :: *) where
   -- The length and dimensions of the result list must match the 'Dimensions' of the vector-like type.
   toList :: (Promotable p, Fractional a) => v -> [p a]
   -- | Convert a representationally-heterogenous vector-like type to a 'Vector' of the same 'Dimensions'.
-  asVector :: forall a.(Real a, Fractional a, VectorSpace (Vector (Dimensions v) a)) => v -> Vector (Dimensions v) a
-  asVector = fromJust . fromList . (toList :: v -> [AnyQuantity a])
+  toVector :: forall a.(Real a, Fractional a, VectorSpace (Vector (Dimensions v) a)) => v -> Vector (Dimensions v) a
+  toVector = fromJust . fromList . (toList :: v -> [AnyQuantity a])
+    -- The types here promise us that the fromJust will succeed.
+  -- | Convert a 'Vector' to a representationally-heterogenous vector-like type of the same 'Dimensions'.
+  fromVector :: forall a.(Real a, Fractional a, VectorSpace (Vector (Dimensions v) a)) => Vector (Dimensions v) a -> v
+  fromVector = fromJust . fromList . (toList :: Vector (Dimensions v) a -> [AnyQuantity a])
     -- The types here promise us that the fromJust will succeed.
   {-# MINIMAL fromListWithLeftovers, toList #-}
 
@@ -116,7 +120,7 @@ infixl 6 ^+^, ^-^
 -- | Construct a representationally-heterogenous vector-like type from a list of 'Promotable' values, if precisely as many
 -- values are available as are required and their dimensions match the 'Dimensions' of the vector-like type. Return 'Nothing'
 -- if these conditions are not met.
-fromList :: (Promotable p, VectorSpace v, Real a) => [p a] -> Maybe v
+fromList :: (Promotable p, CVectorMono v, Real a) => [p a] -> Maybe v
 fromList xs | (result, []) <- fromListWithLeftovers xs = result
             | otherwise = Nothing
 
@@ -144,7 +148,7 @@ class (CVector v) => MonoVectorSpace (v :: * -> *) where
 -- | Construct a representationally-homogenous vector-like type from a list of 'Promotable' values, if precisely as many
 -- values are available as are required and their dimensions match the 'Dimensions' of the vector-like type. Return 'Nothing'
 -- if these conditions are not met.
-fromMonoList :: (Promotable p, MonoVectorSpace v) => [p a] -> Maybe (v a)
+fromMonoList :: (Promotable p, CVector v) => [p a] -> Maybe (v a)
 fromMonoList xs | (result, []) <- fromMonoListWithLeftovers xs = result
                 | otherwise = Nothing
 
@@ -362,7 +366,7 @@ type DirectionSpace v a = (VectorSpace (v a), MetricSpace v, DistanceDimension v
 --
 -- Each component of the direction vector will be 'Dimensionless'.
 direction :: DirectionSpace v a => v a -> DirectionVector v a
-direction v = UnitV . gscale (recip . lengthV $ v) . asVector $ v
+direction v = UnitV . gscale (recip . lengthV $ v) . toVector $ v
 
 -- | A 'Vector' with zero elements.
 type V0 = Vector '[]
