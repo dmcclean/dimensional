@@ -79,6 +79,7 @@ test-suite tests
   default-extensions:  NoImplicitPrelude
   other-modules:       Numeric.Units.DimensionalSpec
                        Numeric.Units.Dimensional.DynamicSpec
+                       Numeric.Units.Dimensional.FixedPointSpec
                        Numeric.Units.Dimensional.QuantitiesSpec
   ghc-options:         -Wall
   build-depends:       dimensional,
