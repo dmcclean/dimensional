@@ -10,7 +10,7 @@
 {-# LANGUAGE TypeOperators #-}
 
 {- |
-   Copyright  : Copyright (C) 2006-2015 Bjorn Buckwalter
+   Copyright  : Copyright (C) 2006-2018 Bjorn Buckwalter
    License    : BSD3
 
    Maintainer : bjorn@buckwalter.se
@@ -33,6 +33,7 @@ import Control.DeepSeq
 import Data.Data
 import qualified Data.ExactPi.TypeLevel as E
 import GHC.Generics
+import Prelude
 
 -- | Encodes whether a unit is a metric unit, that is, whether it can be combined
 -- with a metric prefix to form a related unit.

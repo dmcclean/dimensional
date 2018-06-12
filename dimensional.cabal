@@ -1,8 +1,8 @@
 name:                dimensional
-version:             1.0.1.1
+version:             1.1
 license:             BSD3
 license-file:        LICENSE
-copyright:           Bjorn Buckwalter 2006-2015
+copyright:           Bjorn Buckwalter 2006-2018
 author:              Bjorn Buckwalter
 maintainer:          bjorn@buckwalter.se
 stability:           experimental
@@ -12,7 +12,7 @@ category:            Math, Physics
 synopsis:            Statically checked physical dimensions,
                      using Type Families and Data Kinds.
 cabal-version:       >= 1.10
-tested-with:         GHC == 7.8.4, GHC == 7.10.1, GHC == 7.10.2
+tested-with:         GHC == 7.8.4, GHC == 7.10.1, GHC == 7.10.2, GHC == 7.10.3, GHC == 8.0.1, GHC == 8.0.2, GHC == 8.2.2, GHC == 8.4.1
 build-type:          Simple
 
 description:
@@ -47,9 +47,11 @@ library
                        exact-pi >= 0.4.1 && < 0.5,
                        ieee754 >= 0.7.6,
                        numtype-dk >= 0.5 && < 1.1,
-                       vector >= 0.10
+                       vector >= 0.10,
+                       semigroups
   hs-source-dirs:      src
   default-language:    Haskell2010
+  default-extensions:  NoImplicitPrelude
   ghc-options:         -Wall
   exposed-modules:     Numeric.Units.Dimensional,
                        Numeric.Units.Dimensional.Coercion,
@@ -73,14 +75,17 @@ library
 
 test-suite tests
   type:                exitcode-stdio-1.0
-  main-is:             Test.hs
+  main-is:             Spec.hs
   hs-source-dirs:      tests
-  other-modules:       Numeric.Units.Dimensional.QuantitiesTest,
-                       Numeric.Units.Dimensional.Test
   default-language:    Haskell2010
+  default-extensions:  NoImplicitPrelude
+  other-modules:       Numeric.Units.DimensionalSpec
+                       Numeric.Units.Dimensional.DynamicSpec
+                       Numeric.Units.Dimensional.QuantitiesSpec
   ghc-options:         -Wall
   build-depends:       dimensional,
-                       HUnit,
+                       hspec,
+                       QuickCheck,
                        base
 
 test-suite doctests

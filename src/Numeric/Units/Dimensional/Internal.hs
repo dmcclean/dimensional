@@ -32,8 +32,12 @@ import Data.AEq (AEq)
 import Data.Coerce (coerce)
 import Data.Data
 import Data.ExactPi
+#if MIN_VERSION_base(4,9,0)
+import Data.Functor.Classes (Eq1(..), Ord1(..))
+#endif
 import qualified Data.ExactPi.TypeLevel as E
 import Data.Monoid (Monoid(..))
+import Data.Semigroup (Semigroup(..))
 import Foreign.Ptr (Ptr, castPtr)
 import Foreign.Storable (Storable(..))
 import GHC.Generics
@@ -123,6 +127,14 @@ instance (Bounded a) => Bounded (SQuantity s d a) where
   minBound = Quantity minBound
   maxBound = Quantity maxBound
 
+#if MIN_VERSION_base(4,9,0)
+instance Eq1 (SQuantity s d) where
+  liftEq = coerce
+
+instance Ord1 (SQuantity s d) where
+  liftCompare = coerce
+#endif
+
 instance HasInterchangeName (Unit m d a) where
   interchangeName (Unit n _ _) = interchangeName n
 
@@ -130,6 +142,10 @@ instance HasInterchangeName (Unit m d a) where
 Since quantities form a monoid under addition, but not under multiplication unless they are dimensionless,
 we will define a monoid instance that adds.
 -}
+
+-- | 'Quantity's of a given 'Dimension' form a 'Semigroup' under addition.
+instance (Num a) => Semigroup (SQuantity s d a) where
+  (<>) = liftQ2 (+)
 
 -- | 'Quantity's of a given 'Dimension' form a 'Monoid' under addition.
 instance (Num a) => Monoid (SQuantity s d a) where
