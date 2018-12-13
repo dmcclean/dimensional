@@ -21,8 +21,7 @@ where
 import Data.Data
 import GHC.Generics
 import Numeric (showFFloat, showEFloat)
-import Numeric.Units.Dimensional
-import Numeric.Units.Dimensional.SIUnits
+import Numeric.Units.Dimensional.Prelude
 
 data PresentationQuantity d a = Simple a (Unit 'NonMetric d a)
                               | Composite Integer (Unit 'NonMetric d a) (PresentationQuantity d a)
