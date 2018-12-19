@@ -2,6 +2,8 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Numeric.Units.Dimensional.Presentation
 (
@@ -9,68 +11,72 @@ module Numeric.Units.Dimensional.Presentation
   PresentationQuantity(..)
   -- * Presentation Formats
 , PresentationFormat(..)
-, defaultFormat
-, defaultFormatIn
-, simpleFormat
-  -- ** For Floating-Point Values
-, scientificFormat, scientificFormatIn
-, decimalFormat, decimalFormatIn
+, PresentationUnit(..)
+, simpleUnit
+  -- * Presentation Numbers
+, PresentationNumber(..)
+, value
+  -- * Presentation
+, presentIn
+  -- * Analysis
+, analyze
 )
 where
 
 import Data.Data
+import Data.ExactPi (ExactPi(Exact), approximateValue)
+import Data.Proxy (Proxy)
 import GHC.Generics
 import Numeric (showFFloat, showEFloat)
-import Numeric.Units.Dimensional.Prelude
+import Numeric.Natural
+import Numeric.Units.Dimensional (dmap)
+import Numeric.Units.Dimensional.Prelude hiding (exponent)
 import qualified Prelude as P
 
-data PresentationQuantity d a = Simple a (Unit 'NonMetric d a)
-                              | Composite Integer (Unit 'NonMetric d a) (PresentationQuantity d a)
-  deriving (Eq, Generic, Generic1, Typeable)
+data PresentationQuantity d = Simple PresentationNumber (Unit 'NonMetric d ExactPi)
+                            | Composite Integer (Unit 'NonMetric d ExactPi) (PresentationQuantity d)
+  deriving (Generic, Typeable)
 
-data PresentationFormat d a = SimpleFormat (a -> String -> String) (PresentationUnit d a)
-                            | CompositeFormat (Unit 'NonMetric d a) (PresentationFormat d a)
+data PresentationNumber = PresentationNumber 
+  { piExponent :: Integer
+  , number :: Either Rational (Integer, Int)
+  , exponent :: Maybe (Natural, Integer)
+  }
 
-data PresentationUnit d a = SimpleUnit (Unit 'NonMetric d a)
-                          | PrefixedUnit (Unit 'Metric d a)
-                          | PrefixedUnitMajor (Unit 'Metric d a)
+value :: PresentationNumber -> ExactPi
+value x = Exact (piExponent x) q
+  where
+    q = q' (number x) P.* e (exponent x)
+    q' :: (Either Rational (Integer, Int)) -> Rational
+    q' (Left q'') = q''
+    q' (Right (dm, dp)) = fromInteger dm P./ fromIntegral (10 P.^ dp)
+    e :: Maybe (Natural, Integer) -> Rational
+    e Nothing = 1
+    e (Just (b, e')) = fromIntegral $ fromIntegral b P.^ e'
 
-simpleUnit :: Unit m d a -> PresentationUnit d a
-simpleUnit = SimpleUnit . weaken
+data PresentationFormat d a where
+  ExactFormat :: PresentationUnit d -> PresentationFormat d ExactPi
+  DecimalFormat :: (Maybe Int) -> PresentationUnit d -> PresentationFormat d a
+  CompositeFormat :: Unit 'NonMetric d a -> PresentationFormat d a -> PresentationFormat d a
 
-chooseUnit :: (RealFrac a, Floating a) => PresentationUnit d a -> Quantity d a -> Unit 'NonMetric d a
+data PresentationUnit d = SimpleUnit (Unit 'NonMetric d ExactPi)
+                        | PrefixedUnit (Unit 'Metric d ExactPi)
+                        | PrefixedUnitMajor (Unit 'Metric d ExactPi)
+
+presentIn :: PresentationFormat d a -> Quantity d a -> PresentationQuantity d
+presentIn = undefined
+
+analyze :: PresentationQuantity d -> Quantity d ExactPi
+analyze (Simple x u) = value x *~ u
+analyze (Composite x u q) = ipart + if (x < 0) then negate fpart else fpart
+  where
+    ipart = fromInteger x *~ u
+    fpart = analyze q
+
+simpleUnit :: Unit m d a -> PresentationUnit d
+simpleUnit = SimpleUnit . weaken . exactify
+
+chooseUnit :: (RealFrac a, Floating a) => PresentationUnit d -> Quantity d a -> Unit 'NonMetric d ExactPi
 chooseUnit (SimpleUnit u)        _ = u
-chooseUnit (PrefixedUnit u)      q = withAppropriatePrefix u q
-chooseUnit (PrefixedUnitMajor u) q = withAppropriatePrefix' majorSiPrefixes u q
-
--- | Constructs a 'PresentationFormat' from a showing function and a 'Unit'.
-simpleFormat :: (a -> ShowS) -> Unit m d a -> PresentationFormat d a
-simpleFormat s u = SimpleFormat s (simpleUnit u)
-
--- | Creates a 'PresentationFormat' for a 'Show'able representation from a specified 'Unit'.
-defaultFormatIn :: (Num a, Show a) => Unit m d a -> PresentationFormat d a
-defaultFormatIn = simpleFormat shows
-
--- | A 'PresentationFormat' which 'show's the value in the 'siUnit' of its dimension.
-defaultFormat :: (Num a, Show a, KnownDimension d) => PresentationFormat d a
-defaultFormat = defaultFormatIn siUnit
-
--- | A 'PresentationFormat' which displays a value in scientific notation, in a specified unit,
--- and with an optionally-specified number of digits after the decimal point.
-scientificFormatIn :: (RealFloat a) => Maybe Int -> Unit m d a -> PresentationFormat d a
-scientificFormatIn d = simpleFormat (showEFloat d)
-
--- | A 'PresentationFormat' which displays a value in scientific notation, in the 'siUnit' of its dimension,
--- and with an optionally-specified number of digits after the decimal point.
-scientificFormat :: (RealFloat a, KnownDimension d) => Maybe Int -> PresentationFormat d a
-scientificFormat d = scientificFormatIn d siUnit
-
--- | A 'PresentationFormat' which displays a value in decimal notation, in a specified unit,
--- and with an optionally-specified number of digits after the decimal point.
-decimalFormatIn :: (RealFloat a) => Maybe Int -> Unit m d a -> PresentationFormat d a
-decimalFormatIn d = simpleFormat (showFFloat d)
-
--- | A 'PresentationFormat' which displays a value in decimal notation, in the 'siUnit' of its dimension,
--- and with an optionally-specified number of digits after the decimal point.
-decimalFormat :: (RealFloat a, KnownDimension d) => Maybe Int -> PresentationFormat d a
-decimalFormat d = decimalFormatIn d siUnit
+chooseUnit (PrefixedUnit u)      q = exactify $ withAppropriatePrefix (dmap approximateValue u) q
+chooseUnit (PrefixedUnitMajor u) q = exactify $ withAppropriatePrefix' majorSiPrefixes (dmap approximateValue u) q
