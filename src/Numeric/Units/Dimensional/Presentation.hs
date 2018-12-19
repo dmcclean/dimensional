@@ -10,14 +10,14 @@ module Numeric.Units.Dimensional.Presentation
   -- * Presentation Quantities
   PresentationQuantity(..)
   -- * Presentation Formats
-, PresentationFormat(..)
 , PresentationUnit(..)
 , simpleUnit
   -- * Presentation Numbers
 , PresentationNumber(..)
+, PresentationNumberFormat(..)
 , value
+, presentValueIn
   -- * Presentation
-, presentIn
   -- * Analysis
 , analyze
 )
@@ -25,9 +25,7 @@ where
 
 import Data.Data
 import Data.ExactPi (ExactPi(Exact), approximateValue)
-import Data.Proxy (Proxy)
 import GHC.Generics
-import Numeric (showFFloat, showEFloat)
 import Numeric.Natural
 import Numeric.Units.Dimensional (dmap)
 import Numeric.Units.Dimensional.Prelude hiding (exponent)
@@ -49,22 +47,21 @@ value x = Exact (piExponent x) q
     q = q' (number x) P.* e (exponent x)
     q' :: (Either Rational (Integer, Int)) -> Rational
     q' (Left q'') = q''
-    q' (Right (dm, dp)) = fromInteger dm P./ fromIntegral (10 P.^ dp)
+    q' (Right (dm, dp)) = fromInteger dm P./ (10 P.^ dp)
     e :: Maybe (Natural, Integer) -> Rational
     e Nothing = 1
-    e (Just (b, e')) = fromIntegral $ fromIntegral b P.^ e'
+    e (Just (b, e')) = fromIntegral b P.^ e'
 
-data PresentationFormat d a where
-  ExactFormat :: PresentationUnit d -> PresentationFormat d ExactPi
-  DecimalFormat :: (Maybe Int) -> PresentationUnit d -> PresentationFormat d a
-  CompositeFormat :: Unit 'NonMetric d a -> PresentationFormat d a -> PresentationFormat d a
+data PresentationNumberFormat a where
+  ExactFormat :: PresentationNumberFormat ExactPi
+  DecimalFormat :: (RealFloat a) => (Maybe Int) -> PresentationNumberFormat a
+
+presentValueIn :: PresentationNumberFormat a -> a -> PresentationNumber
+presentValueIn = undefined
 
 data PresentationUnit d = SimpleUnit (Unit 'NonMetric d ExactPi)
                         | PrefixedUnit (Unit 'Metric d ExactPi)
                         | PrefixedUnitMajor (Unit 'Metric d ExactPi)
-
-presentIn :: PresentationFormat d a -> Quantity d a -> PresentationQuantity d
-presentIn = undefined
 
 analyze :: PresentationQuantity d -> Quantity d ExactPi
 analyze (Simple x u) = value x *~ u
