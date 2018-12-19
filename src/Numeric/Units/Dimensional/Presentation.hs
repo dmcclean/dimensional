@@ -16,6 +16,7 @@ module Numeric.Units.Dimensional.Presentation
 , PresentationNumber(..)
 , PresentationNumberFormat(..)
 , value
+, factorForDisplay
 , presentValueIn
   -- * Presentation
   -- * Analysis
@@ -58,6 +59,15 @@ data PresentationNumberFormat a where
 
 presentValueIn :: PresentationNumberFormat a -> a -> PresentationNumber
 presentValueIn = undefined
+
+factorForDisplay :: Integer -> (Integer, Integer, Integer) -- 10s, 2s, remainder
+factorForDisplay 0 = (0, 0, 0)
+factorForDisplay n = findTwos . findTens $ (0, 0, n)
+  where
+    findTens (ten, two, x) | (x', 0) <- x `quotRem` 10 = findTens (ten P.+ 1, two, x')
+                           | otherwise = (ten, two, x)
+    findTwos (ten, two, x) | (x', 0) <- x `quotRem` 2 = findTwos (ten, two P.+ 1, x')
+                           | otherwise = (ten, two, x)
 
 data PresentationUnit d = SimpleUnit (Unit 'NonMetric d ExactPi)
                         | PrefixedUnit (Unit 'Metric d ExactPi)
