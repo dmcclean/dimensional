@@ -1,7 +1,6 @@
 {-# OPTIONS_HADDOCK not-home #-}
 
 {-# LANGUAGE AutoDeriveTypeable #-}
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -20,11 +19,7 @@ import Control.DeepSeq
 import Control.Monad (join)
 import Data.Coerce
 import Data.Data hiding (Prefix)
-#if MIN_VERSION_base(4, 8, 0)
 import Data.Foldable (toList)
-#else
-import Data.Foldable (Foldable, toList)
-#endif
 import Data.Function (on)
 import Data.List (sortBy, nubBy, find)
 import Data.Maybe (fromMaybe)
