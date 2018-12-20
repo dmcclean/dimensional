@@ -32,6 +32,7 @@ where
 
 import Data.Data
 import Data.ExactPi (ExactPi(Exact), approximateValue)
+import Data.List (splitAt)
 import GHC.Generics
 import Numeric.Natural
 import Numeric.Units.Dimensional (dmap)
@@ -52,7 +53,13 @@ data PresentationNumber = PresentationNumber
   , number :: Either Rational (Integer, Int)
   , exponent :: Maybe (Natural, Integer)
   }
-  deriving Show
+
+instance Show PresentationNumber where
+  show (PresentationNumber 0 (Right (n, 0)) Nothing) = show n
+  show (PresentationNumber 0 (Right (n, d)) Nothing) = reverse (f ++ ('.' : i))
+    where
+      (f, i) = splitAt d n'
+      n' = reverse $ show n
 
 value :: PresentationNumber -> ExactPi
 value x = Exact (piExponent x) q
@@ -67,10 +74,12 @@ value x = Exact (piExponent x) q
 
 data PresentationNumberFormat a where
   ExactFormat :: PresentationNumberFormat ExactPi
-  DecimalFormat :: (RealFloat a) => (Maybe Int) -> PresentationNumberFormat a
+  DecimalFormat :: (RealFrac a) => Int -> PresentationNumberFormat a
 
 presentValueIn :: PresentationNumberFormat a -> a -> PresentationNumber
-presentValueIn (DecimalFormat _) x = PresentationNumber { piExponent = 0, number = Left (toRational x), exponent = Nothing }
+presentValueIn (DecimalFormat d) x = PresentationNumber { piExponent = 0, number = Right (x', d), exponent = Nothing }
+  where
+    x' = P.round $ x P.* (10 P.^ d)
 
 factorForDisplay :: Integer -> (Integer, Integer, Integer) -- 10s, 2s, remainder
 factorForDisplay 0 = (0, 0, 0)
