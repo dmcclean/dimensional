@@ -117,16 +117,16 @@ analyze (Composite x u q) = ipart + if (x < 0) then negate fpart else fpart
     ipart = fromInteger x *~ u
     fpart = analyze q
 
-simpleUnit :: Unit m d a -> PresentationUnit d
-simpleUnit = SimpleUnit . weaken . exactify
+simpleUnit :: Unit m d ExactPi -> PresentationUnit d
+simpleUnit = SimpleUnit . weaken
 
-prefixedUnit :: PrefixSet -> Unit 'Metric d a -> PresentationUnit d
-prefixedUnit ps = PrefixedUnit ps . exactify
+prefixedUnit :: PrefixSet -> Unit 'Metric d ExactPi -> PresentationUnit d
+prefixedUnit ps = PrefixedUnit ps
 
-siPrefixedUnit :: Unit 'Metric d a -> PresentationUnit d
+siPrefixedUnit :: Unit 'Metric d ExactPi -> PresentationUnit d
 siPrefixedUnit = prefixedUnit siPrefixes
 
-majorSiPrefixedUnit :: Unit 'Metric d a -> PresentationUnit d
+majorSiPrefixedUnit :: Unit 'Metric d ExactPi -> PresentationUnit d
 majorSiPrefixedUnit = prefixedUnit majorSiPrefixes
 
 chooseUnit :: (RealFrac a, Floating a) => PresentationUnit d -> Quantity d a -> Unit 'NonMetric d ExactPi

@@ -85,9 +85,11 @@ test-suite tests
     default-extensions: NoStarIsType
   other-modules:       Numeric.Units.DimensionalSpec
                        Numeric.Units.Dimensional.DynamicSpec
+                       Numeric.Units.Dimensional.PresentationSpec
                        Numeric.Units.Dimensional.QuantitiesSpec
   ghc-options:         -Wall
   build-depends:       dimensional,
+                       exact-pi,
                        hspec,
                        QuickCheck,
                        base
