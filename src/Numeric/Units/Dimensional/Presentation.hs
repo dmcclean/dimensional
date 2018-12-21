@@ -31,11 +31,10 @@ module Numeric.Units.Dimensional.Presentation
 where
 
 import Data.Data
-import Data.ExactPi (ExactPi(Exact), approximateValue)
+import Data.ExactPi (ExactPi(Exact))
 import Data.List (splitAt)
 import GHC.Generics
 import Numeric.Natural
-import Numeric.Units.Dimensional (dmap)
 import Numeric.Units.Dimensional.Prelude hiding (exponent)
 import Numeric.Units.Dimensional.UnitNames (PrefixSet, siPrefixes, majorSiPrefixes)
 import qualified Prelude as P
@@ -100,12 +99,12 @@ presentIn :: (RealFrac a, Floating a) => PresentationFormat d a -> Quantity d a 
 presentIn (SimpleFormat nf u) q = Simple x' u'
   where
     u' = chooseUnit u q
-    u'' = dmap approximateValue u'
+    u'' = changeRepApproximate u'
     x = q /~ u''
     x' = presentValueIn nf x
 presentIn (CompositeFormat u f) q = Composite n u pq
   where
-    u' = dmap approximateValue u
+    u' = changeRepApproximate u
     x = q /~ u'
     (n, x') = properFraction x
     q' = abs $ x' *~ u'
@@ -132,4 +131,4 @@ majorSiPrefixedUnit = prefixedUnit majorSiPrefixes
 
 chooseUnit :: (RealFrac a, Floating a) => PresentationUnit d -> Quantity d a -> Unit 'NonMetric d ExactPi
 chooseUnit (SimpleUnit u)        _ = u
-chooseUnit (PrefixedUnit ps u)   q = exactify $ withAppropriatePrefix' ps (dmap approximateValue u) q
+chooseUnit (PrefixedUnit ps u)   q = exactify $ withAppropriatePrefix' ps (changeRepApproximate u) q

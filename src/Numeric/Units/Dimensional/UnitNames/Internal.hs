@@ -7,7 +7,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE NumDecimals #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -21,7 +20,7 @@ import Data.Coerce
 import Data.Data hiding (Prefix)
 import Data.Foldable (toList)
 import Data.Function (on)
-import Data.List (sortBy, nubBy, find)
+import Data.List (sortOn, nubBy, find)
 import Data.Maybe (fromMaybe)
 import Data.Ord
 import GHC.Generics hiding (Prefix)
@@ -220,7 +219,7 @@ newtype PrefixSet = PrefixSet { unPrefixSet :: [Prefix] }
 -- | Constructs a 'PrefixSet' from a list of 'Prefix'es by ensuring that the 'emptyPrefix' is present,
 -- removing duplicates, and sorting the prefixes.
 prefixSet :: [Prefix] -> PrefixSet
-prefixSet = PrefixSet . sortBy (comparing $ Down . scaleExponent) . nubBy ((==) `on` scaleExponent) . (emptyPrefix :)
+prefixSet = PrefixSet . sortOn (Down . scaleExponent) . nubBy ((==) `on` scaleExponent) . (emptyPrefix :)
 
 -- | Filters a 'PrefixSet', retaining only those 'Prefix'es which match a supplied predicate.
 --
