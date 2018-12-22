@@ -15,7 +15,9 @@ module Numeric.Units.Dimensional.Presentation
 , prefixedUnit
 , siPrefixedUnit
 , majorSiPrefixedUnit
-  -- * Presentation Formats
+, fixUnit
+, units
+-- * Presentation Formats
 , PresentationFormat(..)
   -- * Presentation Numbers
 , PresentationNumber(..)
@@ -33,6 +35,7 @@ where
 import Data.Data
 import Data.ExactPi (ExactPi(Exact))
 import Data.List (splitAt)
+import Data.List.NonEmpty (NonEmpty(..))
 import GHC.Generics
 import Numeric.Natural
 import Numeric.Units.Dimensional.Prelude hiding (exponent)
@@ -55,8 +58,10 @@ data PresentationNumber = PresentationNumber
 
 instance Show PresentationNumber where
   show (PresentationNumber 0 (Right (n, 0)) Nothing) = show n
-  show (PresentationNumber 0 (Right (n, d)) Nothing) = reverse (f ++ ('.' : i))
+  show (PresentationNumber 0 (Right (n, d)) Nothing) = reverse (f' ++ ('.' : i'))
     where
+      i' = if i == [] then ['0'] else i
+      f' = take d $ f ++ repeat '0'
       (f, i) = splitAt d n'
       n' = reverse $ show n
 
@@ -89,26 +94,36 @@ factorForDisplay n = findTwos . findTens $ (0, 0, n)
     findTwos (ten, two, x) | (x', 0) <- x `quotRem` 2 = findTwos (ten, two P.+ 1, x')
                            | otherwise = (ten, two, x)
 
-data PresentationUnit d = SimpleUnit (Unit 'NonMetric d ExactPi)
+data PresentationUnit d = CompositeUnit (NonEmpty (Unit 'NonMetric d ExactPi))
                         | PrefixedUnit PrefixSet (Unit 'Metric d ExactPi)
 
-data PresentationFormat d a = SimpleFormat (PresentationNumberFormat a) (PresentationUnit d)
-                            | CompositeFormat (Unit 'NonMetric d ExactPi) (PresentationFormat d a)
+data PresentationFormat d a = PresentationFormat (PresentationUnit d) (PresentationNumberFormat a)
+
+fixUnit :: (RealFrac a, Floating a) => PresentationUnit d -> Quantity d a -> PresentationUnit d
+fixUnit (PrefixedUnit ps u) q = simpleUnit . exactify $ withAppropriatePrefix' ps (changeRepApproximate u) q
+fixUnit u _ = u
+
+units :: PresentationUnit d -> NonEmpty (Unit 'NonMetric d ExactPi)
+units (PrefixedUnit _ u) = weaken u :| []
+units (CompositeUnit us) = us
 
 presentIn :: (RealFrac a, Floating a) => PresentationFormat d a -> Quantity d a -> PresentationQuantity d
-presentIn (SimpleFormat nf u) q = Simple x' u'
+presentIn (PresentationFormat pu nf) = go pu
   where
-    u' = chooseUnit u q
-    u'' = changeRepApproximate u'
-    x = q /~ u''
-    x' = presentValueIn nf x
-presentIn (CompositeFormat u f) q = Composite n u pq
-  where
-    u' = changeRepApproximate u
-    x = q /~ u'
-    (n, x') = properFraction x
-    q' = abs $ x' *~ u'
-    pq = presentIn f q'
+    go u'@(PrefixedUnit _ _) = \q -> go (fixUnit u' q) q
+    go (CompositeUnit (u :| [])) = \q -> Simple (presentValueIn nf (q /~ u')) u
+      where
+        u' = changeRepApproximate u
+    go (CompositeUnit (u :| (unext : us))) = \q -> let
+                                                     x = q /~ u'
+                                                     (n, x') = properFraction x
+                                                     q' = abs $ x' *~ u'
+                                                     pq = go unext' q'
+                                                   in
+                                                     Composite n u pq
+      where
+        u' = changeRepApproximate u
+        unext' = CompositeUnit (unext :| us)
 
 analyze :: PresentationQuantity d -> Quantity d ExactPi
 analyze (Simple x u) = value x *~ u
@@ -118,7 +133,7 @@ analyze (Composite x u q) = ipart + if (x < 0) then negate fpart else fpart
     fpart = analyze q
 
 simpleUnit :: Unit m d ExactPi -> PresentationUnit d
-simpleUnit = SimpleUnit . weaken
+simpleUnit = CompositeUnit . (:| []) . weaken
 
 prefixedUnit :: PrefixSet -> Unit 'Metric d ExactPi -> PresentationUnit d
 prefixedUnit ps = PrefixedUnit ps
@@ -128,7 +143,3 @@ siPrefixedUnit = prefixedUnit siPrefixes
 
 majorSiPrefixedUnit :: Unit 'Metric d ExactPi -> PresentationUnit d
 majorSiPrefixedUnit = prefixedUnit majorSiPrefixes
-
-chooseUnit :: (RealFrac a, Floating a) => PresentationUnit d -> Quantity d a -> Unit 'NonMetric d ExactPi
-chooseUnit (SimpleUnit u)        _ = u
-chooseUnit (PrefixedUnit ps u)   q = exactify $ withAppropriatePrefix' ps (changeRepApproximate u) q

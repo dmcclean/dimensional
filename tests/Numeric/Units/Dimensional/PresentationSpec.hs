@@ -1,5 +1,6 @@
 module Numeric.Units.Dimensional.PresentationSpec where
 
+import Data.List.NonEmpty (NonEmpty(..))
 import Numeric.Units.Dimensional.Prelude
 import Numeric.Units.Dimensional.NonSI
 import Numeric.Units.Dimensional.Presentation
@@ -10,7 +11,7 @@ spec = do
          describe "Quantity presentation" $ do
            let x = 12.7 *~ meter :: Length Double
            context "Decimal simple units" $ do
-             let f = \d u -> SimpleFormat (DecimalFormat d) (simpleUnit u)
+             let f = \d u -> PresentationFormat (simpleUnit u) (DecimalFormat d)
              it "renders correctly with zero decimals" $ do
                 show (presentIn (f 0 meter) x) `shouldBe` "13 m"
              it "renders correctly with three decimals" $ do
@@ -20,7 +21,7 @@ spec = do
              it "renders correctly with no integer part" $ do
                 show (presentIn (f 3 (kilo meter)) x) `shouldBe` "0.013 km"
            context "Decimal composite units" $ do
-             let f = \d major minor -> CompositeFormat major (SimpleFormat (DecimalFormat d) (simpleUnit minor)) 
+             let f = \d major minor -> PresentationFormat (CompositeUnit (major :| [minor])) (DecimalFormat d) 
              it "renders correctly with zero decimals" $ do
                show (presentIn (f 0 foot inch) x) `shouldBe` "41 ft 8 in"
              it "renders correctly with three decimals" $ do
@@ -32,7 +33,7 @@ spec = do
              it "renders correctly with zero minor part" $ do
                show (presentIn (f 3 foot inch) (2 *~ foot)) `shouldBe` "2 ft 0.000 in"
            context "Decimal prefixed units" $ do
-             let f = \d u -> SimpleFormat (DecimalFormat d) (majorSiPrefixedUnit u)
+             let f = \d u -> PresentationFormat (majorSiPrefixedUnit u) (DecimalFormat d)
              it "renders correctly with no prefix" $ do
                show (presentIn (f 3 meter) x) `shouldBe` "12.700 m"
              it "renders correctly with positive prefix" $ do
