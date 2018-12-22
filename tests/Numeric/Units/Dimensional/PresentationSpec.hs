@@ -21,7 +21,7 @@ spec = do
              it "renders correctly with no integer part" $ do
                 show (presentIn (f 3 (kilo meter)) x) `shouldBe` "0.013 km"
            context "Decimal composite units" $ do
-             let f = \d major minor -> PresentationFormat (CompositeUnit (major :| [minor])) (DecimalFormat d) 
+             let f = \d major minor -> PresentationFormat (PresentationUnit (major :| [minor])) (DecimalFormat d) 
              it "renders correctly with zero decimals" $ do
                show (presentIn (f 0 foot inch) x) `shouldBe` "41 ft 8 in"
              it "renders correctly with three decimals" $ do

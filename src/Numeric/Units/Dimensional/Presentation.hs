@@ -33,12 +33,13 @@ module Numeric.Units.Dimensional.Presentation
 where
 
 import Data.Data
-import Data.ExactPi (ExactPi(Exact))
+import Data.ExactPi (ExactPi(Exact), approximateValue)
 import Data.List (splitAt)
-import Data.List.NonEmpty (NonEmpty(..))
+import Data.List.NonEmpty (NonEmpty(..), uncons)
 import GHC.Generics
 import Numeric.Natural
 import Numeric.Units.Dimensional.Prelude hiding (exponent)
+import Numeric.Units.Dimensional.Coercion (unQuantity)
 import Numeric.Units.Dimensional.UnitNames (PrefixSet, siPrefixes, majorSiPrefixes)
 import qualified Prelude as P
 
@@ -94,7 +95,7 @@ factorForDisplay n = findTwos . findTens $ (0, 0, n)
     findTwos (ten, two, x) | (x', 0) <- x `quotRem` 2 = findTwos (ten, two P.+ 1, x')
                            | otherwise = (ten, two, x)
 
-data PresentationUnit d = CompositeUnit (NonEmpty (Unit 'NonMetric d ExactPi))
+data PresentationUnit d = PresentationUnit (NonEmpty (Unit 'NonMetric d ExactPi))
                         | PrefixedUnit PrefixSet (Unit 'Metric d ExactPi)
 
 data PresentationFormat d a = PresentationFormat (PresentationUnit d) (PresentationNumberFormat a)
@@ -103,40 +104,37 @@ fixUnit :: (RealFrac a, Floating a) => PresentationUnit d -> Quantity d a -> Pre
 fixUnit (PrefixedUnit ps u) q = simpleUnit . exactify $ withAppropriatePrefix' ps (changeRepApproximate u) q
 fixUnit u _ = u
 
+fixFormat :: (RealFrac a, Floating a) => PresentationFormat d a -> Quantity d a -> PresentationFormat d a
+fixFormat (PresentationFormat u nf) q = PresentationFormat (fixUnit u q) nf
+
 units :: PresentationUnit d -> NonEmpty (Unit 'NonMetric d ExactPi)
 units (PrefixedUnit _ u) = weaken u :| []
-units (CompositeUnit us) = us
+units (PresentationUnit us) = us
 
 presentIn :: (RealFrac a, Floating a) => PresentationFormat d a -> Quantity d a -> PresentationQuantity d
-presentIn (PresentationFormat pu nf) = go pu
+presentIn f@(PresentationFormat (PrefixedUnit _ _) _) = \q -> presentIn (fixFormat f q) q
+presentIn (PresentationFormat (PresentationUnit us) nf) = \q -> go (uncons (fmap prepare us)) (unQuantity q)
   where
-    go u'@(PrefixedUnit _ _) = \q -> go (fixUnit u' q) q
-    go (CompositeUnit (u :| [])) = \q -> Simple (presentValueIn nf (q /~ u')) u
+    prepare :: (Floating a) => Unit 'NonMetric d ExactPi -> (a, Unit 'NonMetric d ExactPi)
+    prepare u = (approximateValue . exactValue $ u, u)
+    go ((f, u), Nothing) x = Simple (presentValueIn nf (x P./ f)) u
+    go ((f, u), Just us') x = Composite n u pq
       where
-        u' = changeRepApproximate u
-    go (CompositeUnit (u :| (unext : us))) = \q -> let
-                                                     x = q /~ u'
-                                                     (n, x') = properFraction x
-                                                     q' = abs $ x' *~ u'
-                                                     pq = go unext' q'
-                                                   in
-                                                     Composite n u pq
-      where
-        u' = changeRepApproximate u
-        unext' = CompositeUnit (unext :| us)
+        (n, x') = properFraction (x P./ f)
+        pq = go (uncons us') (P.abs $ x' P.* f)
 
 analyze :: PresentationQuantity d -> Quantity d ExactPi
 analyze (Simple x u) = value x *~ u
-analyze (Composite x u q) = ipart + if (x < 0) then negate fpart else fpart
+analyze (Composite x u q) = ipart + if x < 0 then negate fpart else fpart
   where
     ipart = fromInteger x *~ u
     fpart = analyze q
 
 simpleUnit :: Unit m d ExactPi -> PresentationUnit d
-simpleUnit = CompositeUnit . (:| []) . weaken
+simpleUnit = PresentationUnit . (:| []) . weaken
 
 prefixedUnit :: PrefixSet -> Unit 'Metric d ExactPi -> PresentationUnit d
-prefixedUnit ps = PrefixedUnit ps
+prefixedUnit = PrefixedUnit
 
 siPrefixedUnit :: Unit 'Metric d ExactPi -> PresentationUnit d
 siPrefixedUnit = prefixedUnit siPrefixes
