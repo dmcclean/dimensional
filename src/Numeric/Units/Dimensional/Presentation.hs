@@ -35,10 +35,10 @@ where
 import Data.Data
 import Data.ExactPi (ExactPi(Exact), approximateValue)
 import Data.List (splitAt)
-import Data.List.NonEmpty (NonEmpty(..), uncons)
+import Data.List.NonEmpty (NonEmpty(..), cons, uncons, zip, zipWith)
 import GHC.Generics
 import Numeric.Natural
-import Numeric.Units.Dimensional.Prelude hiding (exponent)
+import Numeric.Units.Dimensional.Prelude hiding (exponent, zip, zipWith)
 import Numeric.Units.Dimensional.Coercion (unQuantity)
 import Numeric.Units.Dimensional.UnitNames (PrefixSet, siPrefixes, majorSiPrefixes)
 import qualified Prelude as P
@@ -113,15 +113,16 @@ units (PresentationUnit us) = us
 
 presentIn :: (RealFrac a, Floating a) => PresentationFormat d a -> Quantity d a -> PresentationQuantity d
 presentIn f@(PresentationFormat (PrefixedUnit _ _) _) = \q -> presentIn (fixFormat f q) q
-presentIn (PresentationFormat (PresentationUnit us) nf) = \q -> go (uncons (fmap prepare us)) (unQuantity q)
+presentIn (PresentationFormat (PresentationUnit us) nf) = \q -> go (uncons prepared) (unQuantity q)
   where
-    prepare :: (Floating a) => Unit 'NonMetric d ExactPi -> (a, Unit 'NonMetric d ExactPi)
-    prepare u = (approximateValue . exactValue $ u, u)
-    go ((f, u), Nothing) x = Simple (presentValueIn nf (x P./ f)) u
+    ratios xs = zipWith (P./) (cons 1 xs) xs
+    factors = fmap approximateValue . ratios . fmap exactValue $ us
+    prepared = zip factors us
+    go ((f, u), Nothing) x = Simple (presentValueIn nf (x P.* f)) u
     go ((f, u), Just us') x = Composite n u pq
       where
-        (n, x') = properFraction (x P./ f)
-        pq = go (uncons us') (P.abs $ x' P.* f)
+        (n, x') = properFraction (x P.* f)
+        pq = go (uncons us') (P.abs $ x')
 
 analyze :: PresentationQuantity d -> Quantity d ExactPi
 analyze (Simple x u) = value x *~ u
