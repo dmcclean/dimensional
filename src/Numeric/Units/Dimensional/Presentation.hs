@@ -85,10 +85,12 @@ value x = Exact (piExponent x) q
 
 data PresentationNumberFormat a where
   ExactFormat :: PresentationNumberFormat ExactPi
+  RationalFormat :: PresentationNumberFormat Rational
   DecimalFormat :: (RealFrac a) => Int -> PresentationNumberFormat a
 
 presentValueIn :: PresentationNumberFormat a -> a -> PresentationNumber
 presentValueIn ExactFormat (Exact z q) = PresentationNumber { piExponent = z, number = toFiniteDecimal q, exponent = Nothing }
+presentValueIn RationalFormat x = PresentationNumber { piExponent = 0, number = Left x, exponent = Nothing }
 presentValueIn (DecimalFormat d) x = PresentationNumber { piExponent = 0, number = Right (x', d), exponent = Nothing }
   where
     x' = P.round $ x P.* (10 P.^ d)
