@@ -29,6 +29,7 @@ module Numeric.Units.Dimensional.Presentation
 , presentIn
   -- * Analysis
 , analyze
+, toFiniteDecimal
 )
 where
 
@@ -36,6 +37,7 @@ import Data.Data
 import Data.ExactPi (ExactPi(Exact), approximateValue)
 import Data.List (splitAt)
 import Data.List.NonEmpty (NonEmpty(..), cons, uncons, zip, zipWith)
+import Data.Ratio (Ratio(..), denominator, numerator)
 import GHC.Generics
 import Numeric.Natural
 import Numeric.Units.Dimensional.Prelude hiding (exponent, zip, zipWith)
@@ -58,6 +60,10 @@ data PresentationNumber = PresentationNumber
   }
 
 instance Show PresentationNumber where
+  show (PresentationNumber 0 (Left q) Nothing) = show n ++ " / " ++ show d
+    where
+      n = numerator q
+      d = denominator q
   show (PresentationNumber 0 (Right (n, 0)) Nothing) = show n
   show (PresentationNumber 0 (Right (n, d)) Nothing) = reverse (f' ++ ('.' : i'))
     where
@@ -82,18 +88,23 @@ data PresentationNumberFormat a where
   DecimalFormat :: (RealFrac a) => Int -> PresentationNumberFormat a
 
 presentValueIn :: PresentationNumberFormat a -> a -> PresentationNumber
+presentValueIn ExactFormat (Exact z q) = PresentationNumber { piExponent = z, number = toFiniteDecimal q, exponent = Nothing }
 presentValueIn (DecimalFormat d) x = PresentationNumber { piExponent = 0, number = Right (x', d), exponent = Nothing }
   where
     x' = P.round $ x P.* (10 P.^ d)
 
-factorForDisplay :: Integer -> (Integer, Integer, Integer) -- 10s, 2s, remainder
+toFiniteDecimal :: Rational -> Either Rational (Integer, Int)
+toFiniteDecimal x | (five, two, 1) <- factorForDisplay (denominator x) = Right (P.round $ x P.* (10 P.^ (max five two)), fromIntegral $ max five two)
+                  | otherwise = Left x
+
+factorForDisplay :: Integer -> (Integer, Integer, Integer) -- 5s, 2s, remainder
 factorForDisplay 0 = (0, 0, 0)
-factorForDisplay n = findTwos . findTens $ (0, 0, n)
+factorForDisplay n = findTwos . findFives $ (0, 0, n)
   where
-    findTens (ten, two, x) | (x', 0) <- x `quotRem` 10 = findTens (ten P.+ 1, two, x')
-                           | otherwise = (ten, two, x)
-    findTwos (ten, two, x) | (x', 0) <- x `quotRem` 2 = findTwos (ten, two P.+ 1, x')
-                           | otherwise = (ten, two, x)
+    findFives (five, two, x) | (x', 0) <- x `quotRem` 5 = findFives (five P.+ 1, two, x')
+                             | otherwise = (five, two, x)
+    findTwos (five, two, x) | (x', 0) <- x `quotRem` 2 = findTwos (five, two P.+ 1, x')
+                            | otherwise = (five, two, x)
 
 data PresentationUnit d = PresentationUnit (NonEmpty (Unit 'NonMetric d ExactPi))
                         | PrefixedUnit PrefixSet (Unit 'Metric d ExactPi)
