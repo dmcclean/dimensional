@@ -12,6 +12,8 @@ module Numeric.Units.Dimensional.Presentation
   -- * Presentation Units
 , PresentationUnit(..)
 , simpleUnit
+, compositeUnit
+, compositeUnit'
 , prefixedUnit
 , siPrefixedUnit
 , majorSiPrefixedUnit
@@ -19,6 +21,7 @@ module Numeric.Units.Dimensional.Presentation
 , units
 -- * Presentation Formats
 , PresentationFormat(..)
+, decimals
   -- * Presentation Numbers
 , PresentationNumber(..)
 , PresentationNumberFormat(..)
@@ -37,7 +40,7 @@ import Data.Data
 import Data.ExactPi (ExactPi(Exact), approximateValue)
 import Data.List (splitAt)
 import Data.List.NonEmpty (NonEmpty(..), cons, uncons, zip, zipWith)
-import Data.Ratio (Ratio(..), denominator, numerator)
+import Data.Ratio (denominator, numerator)
 import GHC.Generics
 import Numeric.Natural
 import Numeric.Units.Dimensional.Prelude hiding (exponent, zip, zipWith)
@@ -95,6 +98,7 @@ presentValueIn (DecimalFormat d) x = PresentationNumber { piExponent = 0, number
   where
     x' = P.round $ x P.* (10 P.^ d)
 
+-- | Converts a 'Rational' number to its finite decimal expansion, if it has one, or leaves it in rational form if it does not.
 toFiniteDecimal :: Rational -> Either Rational (Integer, Int)
 toFiniteDecimal x | (five, two, 1) <- factorForDisplay (denominator x) = Right (P.round $ x P.* (10 P.^ (max five two)), fromIntegral $ max five two)
                   | otherwise = Left x
@@ -135,7 +139,7 @@ presentIn (PresentationFormat (PresentationUnit us) nf) = \q -> go (uncons prepa
     go ((f, u), Just us') x = Composite n u pq
       where
         (n, x') = properFraction (x P.* f)
-        pq = go (uncons us') (P.abs $ x')
+        pq = go (uncons us') (P.abs x')
 
 analyze :: PresentationQuantity d -> Quantity d ExactPi
 analyze (Simple x u) = value x *~ u
@@ -143,6 +147,16 @@ analyze (Composite x u q) = ipart + if x < 0 then negate fpart else fpart
   where
     ipart = fromInteger x *~ u
     fpart = analyze q
+
+compositeUnit :: NonEmpty (Unit 'NonMetric d ExactPi) -> PresentationUnit d
+compositeUnit = PresentationUnit
+
+compositeUnit' :: (KnownDimension d) => [Unit 'NonMetric d ExactPi] -> PresentationUnit d
+compositeUnit' [] = simpleUnit siUnit
+compositeUnit' (u:us) = compositeUnit (u :| us)
+
+decimals :: (KnownDimension d, RealFrac a) => Int -> PresentationUnit d -> PresentationFormat d a
+decimals d u = PresentationFormat u (DecimalFormat d)
 
 simpleUnit :: Unit m d ExactPi -> PresentationUnit d
 simpleUnit = PresentationUnit . (:| []) . weaken

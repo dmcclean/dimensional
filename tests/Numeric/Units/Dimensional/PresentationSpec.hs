@@ -1,3 +1,5 @@
+{-# LANGUAGE NoMonomorphismRestriction #-}
+{-# LANGUAGE FlexibleContexts #-}
 module Numeric.Units.Dimensional.PresentationSpec where
 
 import Data.List.NonEmpty (NonEmpty(..))
@@ -11,7 +13,7 @@ spec = do
          describe "Quantity presentation" $ do
            let x = 12.7 *~ meter :: Length Double
            context "Decimal simple units" $ do
-             let f = \d u -> PresentationFormat (simpleUnit u) (DecimalFormat d)
+             let f = \d u -> decimals d (simpleUnit u)
              it "renders correctly with zero decimals" $ do
                 show (presentIn (f 0 meter) x) `shouldBe` "13 m"
              it "renders correctly with three decimals" $ do
@@ -21,7 +23,7 @@ spec = do
              it "renders correctly with no integer part" $ do
                 show (presentIn (f 3 (kilo meter)) x) `shouldBe` "0.013 km"
            context "Decimal composite units" $ do
-             let f = \d major minor -> PresentationFormat (PresentationUnit (major :| [minor])) (DecimalFormat d) 
+             let f = \d major minor -> decimals d (compositeUnit (major :| [minor]))
              it "renders correctly with zero decimals" $ do
                show (presentIn (f 0 foot inch) x) `shouldBe` "41 ft 8 in"
              it "renders correctly with three decimals" $ do
@@ -29,17 +31,17 @@ spec = do
              it "renders correctly with negative quantities" $ do
                show (presentIn (f 3 foot inch) (negate x)) `shouldBe` "-41 ft 8.000 in"
              it "renders correctly with zero major part" $ do
-               show (presentIn (f 3 foot inch) (6.3 *~ inch)) `shouldBe` "0 ft 6.300 in"
+               show (presentIn (f 3 foot inch) (6.3 *~ inch :: Length Double)) `shouldBe` "0 ft 6.300 in"
              it "renders correctly with zero minor part" $ do
-               show (presentIn (f 3 foot inch) (2 *~ foot)) `shouldBe` "2 ft 0.000 in"
+               show (presentIn (f 3 foot inch) (2 *~ foot :: Length Double)) `shouldBe` "2 ft 0.000 in"
            context "Decimal prefixed units" $ do
-             let f = \d u -> PresentationFormat (majorSiPrefixedUnit u) (DecimalFormat d)
+             let f = \d u -> decimals d (majorSiPrefixedUnit u)
              it "renders correctly with no prefix" $ do
                show (presentIn (f 3 meter) x) `shouldBe` "12.700 m"
              it "renders correctly with positive prefix" $ do
-               show (presentIn (f 3 watt) (47.2 *~ kilo watt)) `shouldBe` "47.200 kW"
+               show (presentIn (f 3 watt) (47.2 *~ kilo watt :: Power Double)) `shouldBe` "47.200 kW"
              it "renders correctly with negative prefix" $ do
-               show (presentIn (f 3 meter) (3 *~ mil)) `shouldBe` "76.200 μm"
-               show (presentIn (f 3 meter) (0.3 *~ mil)) `shouldBe` "7.620 μm"
-               show (presentIn (f 3 meter) (0.03 *~ mil)) `shouldBe` "762.000 nm"
+               show (presentIn (f 3 meter) (3 *~ mil :: Length Double)) `shouldBe` "76.200 μm"
+               show (presentIn (f 3 meter) (0.3 *~ mil :: Length Double)) `shouldBe` "7.620 μm"
+               show (presentIn (f 3 meter) (0.03 *~ mil :: Length Double)) `shouldBe` "762.000 nm"
 
