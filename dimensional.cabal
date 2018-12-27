@@ -64,6 +64,8 @@ library
                        Numeric.Units.Dimensional.FixedPoint,
                        Numeric.Units.Dimensional.Functor,
                        Numeric.Units.Dimensional.Presentation,
+                       Numeric.Units.Dimensional.Presentation.Numbers,
+                       Numeric.Units.Dimensional.Presentation.Units,
                        Numeric.Units.Dimensional.NonSI,
                        Numeric.Units.Dimensional.Prelude,
                        Numeric.Units.Dimensional.Quantities,
