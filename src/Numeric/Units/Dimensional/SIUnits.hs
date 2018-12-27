@@ -1,9 +1,8 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE NumDecimals #-}
 {-# LANGUAGE RankNTypes #-}
 
 {- |
-   Copyright  : Copyright (C) 2006-2015 Bjorn Buckwalter
+   Copyright  : Copyright (C) 2006-2018 Bjorn Buckwalter
    License    : BSD3
 
    Maintainer : bjorn@buckwalter.se

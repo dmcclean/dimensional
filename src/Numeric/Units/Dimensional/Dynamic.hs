@@ -1,5 +1,5 @@
 {- |
-    Copyright  : Copyright (C) 2006-2014 Bjorn Buckwalter
+    Copyright  : Copyright (C) 2006-2018 Bjorn Buckwalter
     License    : BSD3
 
     Maintainer : bjorn@buckwalter.se
@@ -39,6 +39,8 @@ import Control.DeepSeq
 import Control.Monad
 import Data.Data
 import Data.ExactPi
+import Data.Kind
+import Data.Semigroup (Semigroup(..))
 import Data.Monoid (Monoid(..))
 import GHC.Generics
 import Prelude (Eq(..), Num, Fractional, Floating, Show(..), Bool(..), Maybe(..), (.), ($), (++), (&&), id, otherwise, error)
@@ -53,12 +55,12 @@ import qualified Numeric.Units.Dimensional.Dimensions.TermLevel as D
 
 -- | The class of types that can be used to model 'Quantity's that are certain to have a value with
 -- some dimension.
-class Demotable (q :: * -> *) where
+class Demotable (q :: Type -> Type) where
   demotableOut :: q a -> AnyQuantity a
 
 -- | The class of types that can be used to model 'Quantity's whose 'Dimension's are
 -- only known dynamically.
-class Promotable (q :: * -> *) where
+class Promotable (q :: Type -> Type) where
   promotableIn :: AnyQuantity a -> q a
   promotableOut :: q a -> DynQuantity a
 
@@ -77,7 +79,7 @@ promoteQuantity = promoteQ . promotableOut
                                | otherwise                 = Nothing
 
 instance (KnownDimension d) => Demotable (Quantity d) where
-  demotableOut q@(Quantity x) = AnyQuantity (dimension q) x    
+  demotableOut q@(Quantity x) = AnyQuantity (dimension q) x
 
 -- | A 'Quantity' whose 'Dimension' is only known dynamically.
 data AnyQuantity a = AnyQuantity !Dimension' !a
@@ -85,7 +87,7 @@ data AnyQuantity a = AnyQuantity !Dimension' !a
 
 instance (Show a) => Show (AnyQuantity a) where
   show (AnyQuantity d a) | d == D.dOne = show a
-                         | otherwise   = (show a) ++ " " ++ (show . baseUnitName $ d)
+                         | otherwise   = show a ++ " " ++ (show . baseUnitName $ d)
 
 instance HasDynamicDimension (AnyQuantity a) where
 
@@ -101,11 +103,16 @@ instance Promotable AnyQuantity where
 instance Demotable AnyQuantity where
   demotableOut = id
 
+-- | 'AnyQuantity's form a 'Semigroup' under multiplication, but not under addition because
+-- they may not be added together if their dimensions do not match.
+instance Num a => Semigroup (AnyQuantity a) where
+  (AnyQuantity d1 a1) <> (AnyQuantity d2 a2) = AnyQuantity (d1 D.* d2) (a1 P.* a2)
+
 -- | 'AnyQuantity's form a 'Monoid' under multiplication, but not under addition because
 -- they may not be added together if their dimensions do not match.
 instance Num a => Monoid (AnyQuantity a) where
   mempty = demoteQuantity (1 Dim.*~ one)
-  mappend (AnyQuantity d1 a1) (AnyQuantity d2 a2) = AnyQuantity (d1 D.* d2) (a1 P.* a2)
+  mappend = (Data.Semigroup.<>)
 
 -- | Possibly a 'Quantity' whose 'Dimension' is only known dynamically.
 --
@@ -175,11 +182,16 @@ instance Floating a => Floating (DynQuantity a) where
   acosh = liftDimensionless P.acosh
   atanh = liftDimensionless P.atanh
 
+-- | 'DynQuantity's form a 'Semigroup' under multiplication, but not under addition because
+-- they may not be added together if their dimensions do not match.
+instance Num a => Semigroup (DynQuantity a) where
+    (<>) = (P.*)
+
 -- | 'DynQuantity's form a 'Monoid' under multiplication, but not under addition because
 -- they may not be added together if their dimensions do not match.
 instance Num a => Monoid (DynQuantity a) where
   mempty = demoteQuantity (1 Dim.*~ one)
-  mappend = (P.*)
+  mappend = (Data.Semigroup.<>)
 
 -- | A 'DynQuantity' which does not correspond to a value of any dimension.
 invalidQuantity :: DynQuantity a
@@ -199,7 +211,7 @@ polydimensionalZero = DynQuantity AnyDimension 0
 
 -- Lifts a function which is only valid on dimensionless quantities into a function on DynQuantitys.
 liftDimensionless :: (a -> a) -> DynQuantity a -> DynQuantity a
-liftDimensionless f = liftDQ (matchDimensions $ SomeDimension D.dOne) f
+liftDimensionless = liftDQ (matchDimensions $ SomeDimension D.dOne)
 
 -- Lifts a function on values into a function on DynQuantitys.
 liftDQ :: (DynamicDimension -> DynamicDimension) -- ^ How the function operates on dimensions.
@@ -252,7 +264,7 @@ data AnyUnit = AnyUnit Dimension' (UnitName 'NonMetric) ExactPi
   deriving (Generic, Typeable)
 
 instance Show AnyUnit where
-  show (AnyUnit _ n e) = (show n) ++ " =def= " ++ (show e) ++ " of the SI base unit"
+  show (AnyUnit _ n e) = show n ++ " =def= " ++ show e ++ " of the SI base unit"
 
 instance HasDynamicDimension AnyUnit where
 
@@ -262,10 +274,14 @@ instance HasDimension AnyUnit where
 instance N.HasUnitName AnyUnit where
   unitName (AnyUnit _ n _) = n
 
+-- | 'AnyUnit's form a 'Semigroup' under multiplication.
+instance Semigroup AnyUnit where
+  (<>) = (Numeric.Units.Dimensional.Dynamic.*)
+
 -- | 'AnyUnit's form a 'Monoid' under multiplication.
 instance Monoid AnyUnit where
   mempty = demoteUnit' one
-  mappend = (Numeric.Units.Dimensional.Dynamic.*)
+  mappend = (Data.Semigroup.<>)
 
 anyUnitName :: AnyUnit -> UnitName 'NonMetric
 anyUnitName (AnyUnit _ n _) = n

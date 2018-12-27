@@ -1,7 +1,6 @@
 {-# OPTIONS_HADDOCK not-home #-}
 
 {-# LANGUAGE AutoDeriveTypeable #-}
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -21,12 +20,9 @@ import Control.Applicative
 import Control.DeepSeq
 import Control.Monad (join)
 import qualified Data.Char as C
+import Data.Coerce (coerce)
 import Data.Data hiding (Prefix)
-#if MIN_VERSION_base(4, 8, 0)
 import Data.Foldable (toList)
-#else
-import Data.Foldable (Foldable, toList)
-#endif
 import qualified Data.Map.Strict as M
 import Data.Ord
 import GHC.Generics hiding (Prefix)
@@ -74,6 +70,7 @@ instance NFData (UnitName m) where
     Grouped n' -> rnf n'
     Weaken n' -> rnf n'
 
+-- | `UnitName`s are shown with non-breaking spaces.
 instance Show (UnitName m) where
   show = abbreviation_en
 
@@ -85,8 +82,8 @@ stringName f = go . unitName
     go (MetricAtomic a) = f a
     go (Atomic a) = f a
     go (Prefixed a n) = f a ++ show n
-    go (Product n1 n2) = go n1 ++ " " ++ go n2
-    go (Quotient n1 n2) = go n1 ++ " / " ++ go n2 -- TODO: handle the case where grouping is required
+    go (Product n1 n2) = go n1 ++ "\xA0" ++ go n2
+    go (Quotient n1 n2) = go n1 ++ "\xA0/\xA0" ++ go n2 -- TODO: handle the case where grouping is required
     go (Power x n) = go x ++ "^" ++ show n -- TODO: handle the case where grouping is required
     go (Grouped n) = "(" ++ go n ++ ")"
     go (Weaken n) = go n
@@ -121,20 +118,27 @@ definiteNameComponent l (NameAtom m) = m M.! l
 nameComponent :: Language -> NameAtom m -> Maybe String
 nameComponent l (NameAtom m) = M.lookup l m
 
+asAtomic :: UnitName m -> Maybe (NameAtom ('UnitAtom m))
+asAtomic (MetricAtomic a) = Just a
+asAtomic (Atomic a) = Just a
+asAtomic (Weaken n) = coerce <$> asAtomic n
+asAtomic _ = Nothing
+
 isAtomic :: UnitName m -> Bool
+isAtomic One = True
 isAtomic (MetricAtomic _) = True
 isAtomic (Atomic _) = True
 isAtomic _ = False
 
 -- reduce by algebraic simplifications
 reduce :: UnitName m -> UnitName m
-reduce (One) = One
+reduce One = One
 reduce n@(MetricAtomic _) = n
 reduce n@(Atomic _) = n
 reduce n@(Prefixed _ _) = n
 reduce (Product n1 n2) = reduce' (reduce n1 * reduce n2)
 reduce (Quotient n1 n2) = reduce' (reduce n1 * reduce n2)
-reduce (Power n x) = reduce' ((reduce n) ^ x)
+reduce (Power n x) = reduce' (reduce n ^ x)
 reduce (Grouped n) = reduce' (Grouped (reduce n))
 reduce (Weaken n) = reduce' (Weaken (reduce n))
 
@@ -285,7 +289,7 @@ strengthen _ = Nothing
 -- strengthening or weakening if neccessary. Because it may not be possible to strengthen,
 -- the result is returned in a 'Maybe' wrapper.
 relax :: forall m1 m2.(Typeable m1, Typeable m2) => UnitName m1 -> Maybe (UnitName m2)
-relax n = go (typeRep (Proxy :: Proxy m1)) (typeRep (Proxy :: Proxy m2)) n
+relax = go (typeRep (Proxy :: Proxy m1)) (typeRep (Proxy :: Proxy m2))
   where
     metric = typeRep (Proxy :: Proxy 'Metric)
     nonMetric = typeRep (Proxy :: Proxy 'NonMetric)
@@ -373,7 +377,7 @@ ucumName = ucumName' . unitName
     ucumName' (Weaken n) = ucumName' n
 
 prefix :: String -> String -> String -> Int -> Prefix
-prefix i a f q = Prefix n q
+prefix i a f = Prefix n
   where
     n = atom a f [(ucum, i), (siunitx, '\\' : f)]
 

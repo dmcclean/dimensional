@@ -2,7 +2,6 @@
 
 {-# LANGUAGE AutoDeriveTypeable #-}
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -20,7 +19,7 @@
 
 
 {- |
-   Copyright  : Copyright (C) 2006-2015 Bjorn Buckwalter
+   Copyright  : Copyright (C) 2006-2018 Bjorn Buckwalter
    License    : BSD3
 
    Maintainer : bjorn@buckwalter.se
@@ -59,7 +58,7 @@ reflect only the author's needs to date. Again, patches are welcome.
 
 == Preliminaries
 
-This module requires GHC 7.8 or later. We utilize Data Kinds, TypeNats,
+This module requires GHC 8 or later. We utilize Data Kinds, TypeNats,
 Closed Type Families, etc. Clients of the module are generally not
 required to use these extensions.
 
@@ -228,7 +227,7 @@ import Numeric.NumType.DK.Integers
   )
 import Data.Data
 import Data.ExactPi
-import Data.Foldable (Foldable(foldr))
+import Data.Foldable (Foldable(foldr, length))
 import Data.Maybe
 import Data.Ratio
 import Numeric.Units.Dimensional.Dimensions
@@ -237,18 +236,6 @@ import Numeric.Units.Dimensional.UnitNames hiding ((*), (/), (^), weaken, streng
 import qualified Numeric.Units.Dimensional.UnitNames.Internal as Name
 import Numeric.Units.Dimensional.Variants hiding (type (*), type (/))
 import qualified Numeric.Units.Dimensional.Variants as V
-
--- Provide a version of length which is compatible with base-4.8's version.
--- Where 4.8 is available we use that version as it may have performance advantages.
--- Where it is not available we implement it in terms of foldl'.
-#if MIN_VERSION_base(4,8,0)
-import Data.Foldable (Foldable(length))
-#else
-import Data.Foldable (Foldable(foldl'))
-
-length :: Foldable t => t a -> Int
-length = foldl' (\c _ -> c Prelude.+ 1) 0
-#endif
 
 -- $setup
 -- >>> :set -XFlexibleInstances
@@ -411,7 +398,7 @@ Multiplication, division and powers apply to both units and quantities.
 -- | Forms the reciprocal of a 'Quantity', which has the reciprocal dimension.
 --
 -- >>> recip $ 47 *~ hertz
--- 2.127659574468085e-2 s
+-- 2.127659574468085e-2 s
 recip :: (Fractional a) => Quantity d a -> Quantity (Recip d) a
 recip = liftQ Prelude.recip
 
@@ -550,10 +537,10 @@ infixl 7  *~~, /~~
 -- | The sum of all elements in a foldable structure.
 --
 -- >>> sum ([] :: [Mass Double])
--- 0.0 kg
+-- 0.0 kg
 --
 -- >>> sum [12.4 *~ meter, 1 *~ foot]
--- 12.7048 m
+-- 12.7048 m
 sum :: (Num a, Foldable f) => f (Quantity d a) -> Quantity d a
 sum = foldr (+) _0
 
@@ -716,7 +703,7 @@ If you feel your work requires this instance, it is provided as an orphan in "Nu
 --
 -- >>> let x = (37 :: Rational) *~ poundMass
 -- >>> changeRep x :: Mass Double
--- 16.78291769 kg
+-- 16.78291769 kg
 changeRep :: (KnownVariant v, Real a, Fractional b) => Dimensional v d a -> Dimensional v d b
 changeRep = dmap realToFrac
 

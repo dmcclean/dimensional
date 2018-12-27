@@ -27,16 +27,15 @@ where
 
 import Control.Applicative
 import Control.DeepSeq
-import Control.Monad (liftM)
 import Data.AEq (AEq)
 import Data.Coerce (coerce)
 import Data.Data
+import Data.Kind
 import Data.ExactPi
-#if MIN_VERSION_base(4,9,0)
 import Data.Functor.Classes (Eq1(..), Ord1(..))
-#endif
 import qualified Data.ExactPi.TypeLevel as E
 import Data.Monoid (Monoid(..))
+import Data.Semigroup (Semigroup(..))
 import Foreign.Ptr (Ptr, castPtr)
 import Foreign.Storable (Storable(..))
 import GHC.Generics
@@ -76,12 +75,12 @@ type SQuantity s = Dimensional ('DQuantity s)
 -- Each validly constructed type of kind 'Variant' has a 'KnownVariant' instance.
 class KnownVariant (v :: Variant) where
   -- | A dimensional value, either a 'Quantity' or a 'Unit', parameterized by its 'Dimension' and representation.
-  data Dimensional v :: Dimension -> * -> *
+  data Dimensional v :: Dimension -> Type -> Type
   -- | A scale factor by which the numerical value of this dimensional value is implicitly multiplied.
   type ScaleFactor v :: E.ExactPi'
   extractValue :: Dimensional v d a -> (a, Maybe ExactPi)
   extractName :: Dimensional v d a -> Maybe (UnitName 'NonMetric)
-  injectValue :: (Maybe (UnitName 'NonMetric)) -> (a, Maybe ExactPi) -> Dimensional v d a
+  injectValue :: Maybe (UnitName 'NonMetric) -> (a, Maybe ExactPi) -> Dimensional v d a
   -- | Maps over the underlying representation of a dimensional value.
   -- The caller is responsible for ensuring that the supplied function respects the dimensional abstraction.
   -- This means that the function must preserve numerical values, or linearly scale them while preserving the origin.
@@ -91,11 +90,7 @@ deriving instance Typeable Dimensional
 
 instance KnownVariant ('DQuantity s) where
   newtype Dimensional ('DQuantity s) d a = Quantity a
-    deriving (Eq, Ord, AEq, Data, Generic, Generic1
-#if MIN_VERSION_base(4,8,0)
-     , Typeable -- GHC 7.8 doesn't support deriving this instance
-#endif
-    )
+    deriving (Eq, Ord, AEq, Data, Generic, Generic1, Typeable)
   type (ScaleFactor ('DQuantity s)) = s
   extractValue (Quantity x) = (x, Nothing)
   extractName _ = Nothing
@@ -104,11 +99,7 @@ instance KnownVariant ('DQuantity s) where
 
 instance (Typeable m) => KnownVariant ('DUnit m) where
   data Dimensional ('DUnit m) d a = Unit !(UnitName m) !ExactPi !a
-    deriving (Generic, Generic1
-#if MIN_VERSION_base(4,8,0)
-     , Typeable -- GHC 7.8 doesn't support deriving this instance
-#endif
-    )
+    deriving (Generic, Generic1, Typeable)
   type (ScaleFactor ('DUnit m)) = E.One
   extractValue (Unit _ e x) = (x, Just e)
   extractName (Unit n _ _) = Just . Name.weaken $ n
@@ -122,13 +113,11 @@ instance (Bounded a) => Bounded (SQuantity s d a) where
   minBound = Quantity minBound
   maxBound = Quantity maxBound
 
-#if MIN_VERSION_base(4,9,0)
 instance Eq1 (SQuantity s d) where
   liftEq = coerce
 
 instance Ord1 (SQuantity s d) where
   liftCompare = coerce
-#endif
 
 instance HasUnitName (Unit m d a) where
   unitName (Unit n _ _) = unitName n
@@ -137,6 +126,10 @@ instance HasUnitName (Unit m d a) where
 Since quantities form a monoid under addition, but not under multiplication unless they are dimensionless,
 we will define a monoid instance that adds.
 -}
+
+-- | 'Quantity's of a given 'Dimension' form a 'Semigroup' under addition.
+instance (Num a) => Semigroup (SQuantity s d a) where
+  (<>) = liftQ2 (+)
 
 -- | 'Quantity's of a given 'Dimension' form a 'Monoid' under addition.
 instance (Num a) => Monoid (SQuantity s d a) where
@@ -175,7 +168,7 @@ instance Storable a => Storable (SQuantity s d a) where
   {-# INLINE alignment #-}
   poke ptr = poke (castPtr ptr :: Ptr a) . coerce
   {-# INLINE poke #-}
-  peek ptr = liftM Quantity (peek (castPtr ptr :: Ptr a))
+  peek ptr = fmap Quantity (peek (castPtr ptr :: Ptr a))
   {-# INLINE peek #-}
 
 {-
@@ -192,9 +185,9 @@ instance (M.MVector U.MVector a) => M.MVector U.MVector (SQuantity s d a) where
   {-# INLINE basicUnsafeSlice #-}
   basicOverlaps u v    = M.basicOverlaps (unMVQ u) (unMVQ v)
   {-# INLINE basicOverlaps #-}
-  basicUnsafeNew       = liftM MV_Quantity . M.basicUnsafeNew
+  basicUnsafeNew       = fmap MV_Quantity . M.basicUnsafeNew
   {-# INLINE basicUnsafeNew #-}
-  basicUnsafeRead v    = liftM Quantity . M.basicUnsafeRead (unMVQ v)
+  basicUnsafeRead v    = fmap Quantity . M.basicUnsafeRead (unMVQ v)
   {-# INLINE basicUnsafeRead #-}
   basicUnsafeWrite v i = M.basicUnsafeWrite (unMVQ v) i . coerce
   {-# INLINE basicUnsafeWrite #-}
@@ -204,15 +197,15 @@ instance (M.MVector U.MVector a) => M.MVector U.MVector (SQuantity s d a) where
 #endif
 
 instance (G.Vector U.Vector a) => G.Vector U.Vector (SQuantity s d a) where
-  basicUnsafeFreeze    = liftM V_Quantity  . G.basicUnsafeFreeze . unMVQ
+  basicUnsafeFreeze    = fmap V_Quantity  . G.basicUnsafeFreeze . unMVQ
   {-# INLINE basicUnsafeFreeze #-}
-  basicUnsafeThaw      = liftM MV_Quantity . G.basicUnsafeThaw   . unVQ
+  basicUnsafeThaw      = fmap MV_Quantity . G.basicUnsafeThaw   . unVQ
   {-# INLINE basicUnsafeThaw #-}
   basicLength          = G.basicLength . unVQ
   {-# INLINE basicLength #-}
   basicUnsafeSlice m n = V_Quantity . G.basicUnsafeSlice m n . unVQ
   {-# INLINE basicUnsafeSlice #-}
-  basicUnsafeIndexM v  = liftM Quantity . G.basicUnsafeIndexM (unVQ v)
+  basicUnsafeIndexM v  = fmap Quantity . G.basicUnsafeIndexM (unVQ v)
   {-# INLINE basicUnsafeIndexM #-}
 
 {-
@@ -220,6 +213,7 @@ We will conclude by providing a reasonable 'Show' instance for
 quantities. The SI unit of the quantity is inferred
 from its dimension.
 -}
+-- | Uses non-breaking spaces between the value and the unit, and within the unit name.
 instance (KnownDimension d, E.KnownExactPi s, Show a, Real a) => Show (SQuantity s d a) where
   show (Quantity x) | isExactOne s' = show x ++ showName n
                     | otherwise = "Quantity " ++ show x ++ " {- " ++ show q ++ " -}"
@@ -231,23 +225,26 @@ instance (KnownDimension d, E.KnownExactPi s, Show a, Real a) => Show (SQuantity
 
 -- | Shows the value of a 'Quantity' expressed in a specified 'Unit' of the same 'Dimension'.
 --
--- >>> showIn watt $ (37 *~ volt) * (4 *~ ampere)
--- "148.0 W"
+-- Uses non-breaking spaces between the value and the unit, and within the unit name.
+--
+-- >>> putStrLn $ showIn watt $ (37 *~ volt) * (4 *~ ampere)
+-- 148.0 W
 showIn :: (Show a, Fractional a) => Unit m d a -> Quantity d a -> String
 showIn (Unit n _ y) (Quantity x) = show (x / y) ++ (showName . Name.weaken $ n)
 
 showName :: UnitName 'NonMetric -> String
 showName n | n == nOne = ""
-           | otherwise = " " ++ show n
+           | otherwise = "\xA0" ++ show n
 
+-- | Unit names are shown with non-breaking spaces.
 instance (Show a) => Show (Unit m d a) where
   show (Unit n e x) = "The unit " ++ show n ++ ", with value " ++ show e ++ " (or " ++ show x ++ ")"
 
 -- Operates on a dimensional value using a unary operation on values, possibly yielding a Unit.
-liftD :: (KnownVariant v1, KnownVariant v2) => (ExactPi -> ExactPi) -> (a -> b) -> UnitNameTransformer -> (Dimensional v1 d1 a) -> (Dimensional v2 d2 b)
+liftD :: (KnownVariant v1, KnownVariant v2) => (ExactPi -> ExactPi) -> (a -> b) -> UnitNameTransformer -> Dimensional v1 d1 a -> Dimensional v2 d2 b
 liftD fe f nt x = let (x', e') = extractValue x
                       n = extractName x
-                      n' = (liftA nt) n
+                      n' = fmap nt n
                    in injectValue n' (f x', fmap fe e')
 
 -- Operates on a dimensional value using a unary operation on values, yielding a Quantity.
@@ -260,7 +257,7 @@ liftD2 fe f nt x1 x2 = let (x1', e1') = extractValue x1
                            (x2', e2') = extractValue x2
                            n1 = extractName x1
                            n2 = extractName x2
-                           n' = (liftA2 nt) n1 n2
+                           n' = liftA2 nt n1 n2
                         in injectValue n' (f x1' x2', fe <$> e1' <*> e2')
 
 -- Combines two dimensional values using a binary operation on values, yielding a Quantity.
