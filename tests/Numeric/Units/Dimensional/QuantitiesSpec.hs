@@ -1,3 +1,5 @@
+{-# LANGUAGE NoImplicitPrelude #-}
+
 module Numeric.Units.Dimensional.QuantitiesSpec where
 
 import Numeric.Units.Dimensional.Prelude

@@ -6,6 +6,7 @@ module Main (main) where
 
 import System.FilePath.Glob (glob)
 import Test.DocTest (doctest)
+import Prelude
 
 #if MIN_VERSION_base(4,12,0)
 doctestFlags = ["-XNoStarIsType"]

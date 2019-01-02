@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 
 module Numeric.Units.Dimensional.Presentation.Units
 (

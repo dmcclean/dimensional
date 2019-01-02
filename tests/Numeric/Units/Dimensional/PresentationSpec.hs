@@ -1,5 +1,7 @@
-{-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE NoMonomorphismRestriction #-}
+
 module Numeric.Units.Dimensional.PresentationSpec where
 
 import Data.List.NonEmpty (NonEmpty(..))
