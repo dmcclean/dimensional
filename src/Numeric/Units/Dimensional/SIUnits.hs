@@ -68,7 +68,8 @@ import Numeric.Units.Dimensional
 import Numeric.Units.Dimensional.Quantities
 import Numeric.Units.Dimensional.UnitNames (Prefix, siPrefixes, scaleExponent)
 import qualified Numeric.Units.Dimensional.UnitNames as N
-import Numeric.Units.Dimensional.UnitNames.Internal (metricAtomic, atomic, siunitx, usEnglish, ucum)
+import Numeric.Units.Dimensional.UnitNames.Internal (metricAtomic, atomic)
+import Numeric.Units.Dimensional.UnitNames.Languages (siunitx, usEnglish, ucum)
 import qualified Numeric.Units.Dimensional.UnitNames.Internal as I
 import Numeric.NumType.DK.Integers ( pos3 )
 import Prelude ( Eq(..), ($), (.), Num, Fractional, Floating, RealFrac(..), Maybe(..), otherwise, error, Ord(..), fst, snd, Int, Bool, fmap, mod, (&&))

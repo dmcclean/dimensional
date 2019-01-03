@@ -19,43 +19,56 @@ where
 import Control.Applicative
 import Control.DeepSeq
 import Control.Monad (join)
-import qualified Data.Char as C
 import Data.Coerce (coerce)
 import Data.Data hiding (Prefix)
 import Data.Foldable (toList)
-import qualified Data.Map.Strict as M
 import Data.Ord
 import GHC.Generics hiding (Prefix)
 import Numeric.Units.Dimensional.Dimensions.TermLevel (Dimension', asList, HasDimension(..))
+import Numeric.Units.Dimensional.UnitNames.Atoms
+import Numeric.Units.Dimensional.UnitNames.Languages
 import Numeric.Units.Dimensional.Variants (Metricality(..))
 import Prelude hiding ((*), (/), (^), product)
 import qualified Prelude as P
 
+type UnitName = UnitName' NameAtom
+
 -- | The name of a unit.
-data UnitName (m :: Metricality) where
+data UnitName' (a :: NameAtomType -> *) (m :: Metricality) where
   -- The name of the unit of dimensionless values.
-  One :: UnitName 'NonMetric
+  One :: UnitName' a 'NonMetric
   -- A name of an atomic unit to which metric prefixes may be applied.
-  MetricAtomic :: NameAtom ('UnitAtom 'Metric) -> UnitName 'Metric
+  MetricAtomic :: a ('UnitAtom 'Metric) -> UnitName' a 'Metric
   -- A name of an atomic unit to which metric prefixes may not be applied.
-  Atomic :: NameAtom ('UnitAtom 'NonMetric) -> UnitName 'NonMetric
+  Atomic :: a ('UnitAtom 'NonMetric) -> UnitName' a 'NonMetric
   -- A name of a prefixed unit.
-  Prefixed :: PrefixName -> UnitName 'Metric -> UnitName 'NonMetric
+  Prefixed :: a 'PrefixAtom -> UnitName' a 'Metric -> UnitName' a 'NonMetric
   -- A compound name formed from the product of two names.
-  Product :: UnitName 'NonMetric -> UnitName 'NonMetric -> UnitName 'NonMetric
+  Product :: UnitName' a 'NonMetric -> UnitName' a 'NonMetric -> UnitName' a 'NonMetric
   -- A compound name formed from the quotient of two names.
-  Quotient :: UnitName 'NonMetric -> UnitName 'NonMetric -> UnitName 'NonMetric
+  Quotient :: UnitName' a 'NonMetric -> UnitName' a 'NonMetric -> UnitName' a 'NonMetric
   -- A compound name formed by raising a unit name to an integer power.
-  Power :: UnitName 'NonMetric -> Int -> UnitName 'NonMetric
+  Power :: UnitName' a 'NonMetric -> Int -> UnitName' a 'NonMetric
   -- A compound name formed by grouping another name, which is generally compound.
-  Grouped :: UnitName 'NonMetric -> UnitName 'NonMetric
+  Grouped :: UnitName' a 'NonMetric -> UnitName' a 'NonMetric
   -- A weakened name formed by forgetting that it could accept a metric prefix.
   --
   -- Also available is the smart constructor `weaken` which accepts any `UnitName` as input.
-  Weaken :: UnitName 'Metric -> UnitName 'NonMetric
+  Weaken :: UnitName' a 'Metric -> UnitName' a 'NonMetric
   deriving (Typeable)
 
 deriving instance Eq (UnitName m)
+
+nmap :: (forall t. a t -> b t) -> UnitName' a m -> UnitName' b m
+nmap _ One = One
+nmap f (MetricAtomic a) = MetricAtomic (f a)
+nmap f (Atomic a) = Atomic (f a)
+nmap f (Prefixed p u) = Prefixed (f p) (nmap f u)
+nmap f (Product u1 u2) = Product (nmap f u1) (nmap f u2)
+nmap f (Quotient u1 u2) = Quotient (nmap f u1) (nmap f u2)
+nmap f (Power u n) = Power (nmap f u) n
+nmap f (Grouped u) = Grouped (nmap f u)
+nmap f (Weaken u) = Weaken (nmap f u)
 
 -- As it is for a GADT, this instance cannot be derived or use the generic default implementation
 instance NFData (UnitName m) where
@@ -112,12 +125,6 @@ prefixAbbreviationEnglish = definiteNameComponent internationalEnglishAbbreviati
 prefixNameEnglish :: Prefix -> String
 prefixNameEnglish = definiteNameComponent internationalEnglish . prefixName
 
-definiteNameComponent :: Language -> NameAtom m -> String
-definiteNameComponent l (NameAtom m) = m M.! l
-
-nameComponent :: Language -> NameAtom m -> Maybe String
-nameComponent l (NameAtom m) = M.lookup l m
-
 asAtomic :: UnitName m -> Maybe (NameAtom ('UnitAtom m))
 asAtomic (MetricAtomic a) = Just a
 asAtomic (Atomic a) = Just a
@@ -131,6 +138,7 @@ isAtomic (Atomic _) = True
 isAtomic _ = False
 
 -- reduce by algebraic simplifications
+{-# DEPRECATED reduce "This function has strange and undocumented semantics, and will be removed in favor of more clearly documented algebraic maniupulation functions." #-}
 reduce :: UnitName m -> UnitName m
 reduce One = One
 reduce n@(MetricAtomic _) = n
@@ -153,15 +161,6 @@ reduce' (Power n 1) = reduce' n
 reduce' (Grouped n) = reduce' n
 reduce' n@(Weaken (MetricAtomic _)) = n
 reduce' n = n
-
-data NameAtomType = UnitAtom Metricality
-                  | PrefixAtom
-  deriving (Eq, Ord, Data, Typeable, Generic)
-
-instance NFData NameAtomType where -- instance is derived from Generic instance
-
--- | The name of a metric prefix.
-type PrefixName = NameAtom 'PrefixAtom
 
 data Prefix = Prefix
               {
@@ -304,51 +303,6 @@ relax = go (typeRep (Proxy :: Proxy m1)) (typeRep (Proxy :: Proxy m2))
 grouped :: UnitName m -> UnitName 'NonMetric
 grouped = Grouped . weaken
 
--- | An IETF language tag.
-type Language = String
-
--- | The language of unit names standardized by the Unified Code for Units of Measure.
---
--- See <http://unitsofmeasure.org/ here> for further information.
-ucum :: Language
-ucum = "x-ucum"
-
--- | The language of unit names used by the siunitx LaTeX package.
---
--- See <https://www.ctan.org/pkg/siunitx here> for further information.
-siunitx :: Language
-siunitx = "x-siunitx"
-
--- | The English language.
-internationalEnglish :: Language
-internationalEnglish = "en"
-
--- | The English language, restricted to the ASCII character set.
-internationalEnglishAscii :: Language
-internationalEnglishAscii = "en-x-ascii"
-
--- | The English language, as used in the United States.
-usEnglish :: Language
-usEnglish = "en-US"
-
--- | An abbreviation in the English language.
-internationalEnglishAbbreviation :: Language
-internationalEnglishAbbreviation = "en-x-abbrev"
-
--- | An abbreviation in the English language, restricted to the ASCII character set.
-internationalEnglishAsciiAbbreviation :: Language
-internationalEnglishAsciiAbbreviation = "en-x-abbrev-ascii"
-
-isValidAscii :: String -> Bool
-isValidAscii = all (\c -> C.isAscii c && C.isPrint c)
-
--- | Represents the name of an atomic unit or prefix.
-newtype NameAtom (m :: NameAtomType)
-  = NameAtom (M.Map Language String) -- It's an invariant that internationalEnglish and internationalEnglishAbbreviation must appear as keys in the map. If the 'NameAtomType' is a prefix or metric, it must also contain 'ucum' as a key.
-  deriving (Eq, Data, Typeable, Generic)
-
-instance NFData (NameAtom m) where -- instance is derived from Generic instance
-
 ucumName :: (HasUnitName a) => a -> Maybe String
 ucumName = ucumName' . unitName
   where
@@ -395,17 +349,6 @@ atomic :: String -- ^ Abbreviated name in international English
        -> [(Language, String)] -- ^ List of unit names in other 'Language's.
        -> UnitName 'NonMetric
 atomic a f ns = Atomic $ atom a f ns
-
--- | Constructs a 'NameAtom' of some 'NameAtomType'.
-atom :: String -- ^ Abbreviated name in international English
-     -> String -- ^ Full name in international English
-     -> [(Language, String)] -- ^ List of names in other 'Language's.
-     -> NameAtom t
-atom a f ns = NameAtom $ M.union (M.fromList ns) ascii'
-  where
-    ascii' = if (isValidAscii f) then M.insert internationalEnglishAscii f ascii else ascii
-    ascii = if (isValidAscii a) then M.insert internationalEnglishAsciiAbbreviation a basic else basic
-    basic = M.fromList [(internationalEnglishAbbreviation, a), (internationalEnglish, f)]
 
 -- | The type of a unit name transformation that may be associated with an operation that takes a single unit as input.
 type UnitNameTransformer = (forall m.UnitName m -> UnitName 'NonMetric)

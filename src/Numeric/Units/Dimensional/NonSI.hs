@@ -81,7 +81,8 @@ module Numeric.Units.Dimensional.NonSI
 where
 
 import Numeric.Units.Dimensional.Prelude
-import Numeric.Units.Dimensional.UnitNames.Internal (atomic, metricAtomic, siunitx, ucum, internationalEnglishAscii)
+import Numeric.Units.Dimensional.UnitNames.Internal (atomic, metricAtomic)
+import Numeric.Units.Dimensional.UnitNames.Languages (siunitx, ucum, internationalEnglishAscii)
 import qualified Prelude
 
 -- $setup

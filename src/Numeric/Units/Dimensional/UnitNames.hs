@@ -32,6 +32,8 @@ module Numeric.Units.Dimensional.UnitNames
 )
 where
 
+import Numeric.Units.Dimensional.UnitNames.Atoms
+import Numeric.Units.Dimensional.UnitNames.Languages
 import Numeric.Units.Dimensional.UnitNames.Internal
 import Numeric.Units.Dimensional.Variants
 import Prelude hiding ((*), (/), (^), product)
