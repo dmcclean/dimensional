@@ -113,7 +113,7 @@ prefixAbbreviationEnglish = definiteNameComponent internationalEnglishAbbreviati
 prefixNameEnglish :: Prefix -> String
 prefixNameEnglish = definiteNameComponent internationalEnglish . prefixName
 
-asAtomic :: UnitName m -> Maybe NameAtom
+asAtomic :: UnitName' m a -> Maybe a
 asAtomic (MetricAtomic a) = Just a
 asAtomic (Atomic a) = Just a
 asAtomic (Weaken n) = asAtomic n
@@ -123,14 +123,14 @@ asAtomic _ = Nothing
 isAtomic :: UnitName m -> Bool
 isAtomic = isJust . asAtomic
 
-asMolecular :: UnitName m -> Maybe NameMolecule
+asMolecular :: UnitName' m a -> Maybe (NameMolecule a)
 asMolecular (MetricAtomic a) = Just (NameMolecule Nothing a)
 asMolecular (Atomic a) = Just (NameMolecule Nothing a)
 asMolecular (Prefixed p a) = Just (NameMolecule (Just p) a)
 asMolecular (Weaken n) = asMolecular n
 asMolecular _ = Nothing
 
-isMolecular :: UnitName m -> Bool
+isMolecular :: UnitName' m a -> Bool
 isMolecular = isJust . asMolecular
 
 -- | A 'UnitName' is simple if it is 'One', an atomic name, a prefix application to an atomic name,
@@ -181,7 +181,7 @@ eliminateOnes (Grouped n) = case eliminateOnes n of
 eliminateOnes (Weaken n) = Weaken (eliminateOnes n)
 eliminateOnes n = n
 
-productNormalForm :: UnitName m -> UnitName m
+productNormalForm :: (Ord a) => UnitName' m a -> UnitName' m a
 productNormalForm n = case n of
                         (MetricAtomic _) -> n
                         One -> n
@@ -193,10 +193,10 @@ productNormalForm n = case n of
                         Grouped _ -> go n
                         Weaken _ -> go n
   where
-    go :: UnitName 'NonMetric -> UnitName 'NonMetric
+    go :: (Ord a) => UnitName' 'NonMetric a -> UnitName' 'NonMetric a
     go = productOfMolecules . toMolecules
 
-quotientNormalForm :: UnitName m -> UnitName m
+quotientNormalForm :: (Ord a) => UnitName' m a -> UnitName' m a
 quotientNormalForm n = case n of
                          (MetricAtomic _) -> n
                          One -> n
@@ -208,25 +208,25 @@ quotientNormalForm n = case n of
                          Grouped _ -> go n
                          Weaken _ -> go n
   where
-    go :: UnitName 'NonMetric -> UnitName 'NonMetric
+    go :: (Ord a) => UnitName' 'NonMetric a -> UnitName' 'NonMetric a
     go = fromMolecules . partitionMolecules . toMolecules
-    partitionMolecules :: M.Map NameMolecule Int -> (M.Map NameMolecule Int, M.Map NameMolecule Int)
+    partitionMolecules :: M.Map (NameMolecule a) Int -> (M.Map (NameMolecule a) Int, M.Map (NameMolecule a) Int)
     partitionMolecules = M.partition (> 0) . M.filter (/= 0)
-    fromMolecules :: (M.Map NameMolecule Int, M.Map NameMolecule Int) -> UnitName 'NonMetric
+    fromMolecules :: (M.Map (NameMolecule a) Int, M.Map (NameMolecule a) Int) -> UnitName' 'NonMetric a
     fromMolecules (ns, ds) | M.null ds = productOfMolecules ns
                            | otherwise = Quotient (productOfMolecules ns) (productOfMolecules $ fmap negate ds)
 
-productOfMolecules :: M.Map NameMolecule Int -> UnitName 'NonMetric
+productOfMolecules :: M.Map (NameMolecule a) Int -> UnitName' 'NonMetric a
 productOfMolecules = product . fmap build . M.toList
   where
-    build :: (NameMolecule, Int) -> UnitName 'NonMetric
+    build :: (NameMolecule a, Int) -> UnitName' 'NonMetric a
     build (_, 0) = One
     build ((NameMolecule (Just p) a), 1) = Prefixed p a
     build ((NameMolecule Nothing a), 1) = Atomic a
     build ((NameMolecule (Just p) a), x) = Power (Prefixed p a) x
     build ((NameMolecule Nothing a), x) = Power (Atomic a) x
 
-toMolecules :: UnitName m -> M.Map NameMolecule Int
+toMolecules :: (Ord a) => UnitName' m a -> M.Map (NameMolecule a) Int
 toMolecules One = M.empty
 toMolecules (Atomic n) = M.singleton (NameMolecule Nothing n) 1
 toMolecules (MetricAtomic n) = M.singleton (NameMolecule Nothing n) 1
@@ -460,12 +460,12 @@ type UnitNameTransformer2 = (forall m1 m2.UnitName m1 -> UnitName m2 -> UnitName
 --
 -- If you wish to form a heterogenous product of 'Metric' and 'NonMetric' units
 -- you should apply 'weaken' to the 'Metric' ones.
-product :: Foldable f => f (UnitName 'NonMetric) -> UnitName 'NonMetric
+product :: Foldable f => f (UnitName' 'NonMetric a) -> UnitName' 'NonMetric a
 product = go . toList
   where
     -- This is not defined using a simple fold so that it does not complicate the product with
     -- valid but meaningless occurences of nOne.
-    go :: [UnitName 'NonMetric] -> UnitName 'NonMetric
-    go [] = nOne
+    go :: [UnitName' 'NonMetric a] -> UnitName' 'NonMetric a
+    go [] = One
     go [n] = n
-    go (n : ns) = n * go ns
+    go (n : ns) = Product n (go ns)
