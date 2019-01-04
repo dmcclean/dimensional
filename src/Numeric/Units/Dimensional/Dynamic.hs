@@ -39,6 +39,7 @@ import Control.DeepSeq
 import Control.Monad
 import Data.Data
 import Data.ExactPi
+import Data.Group
 import Data.Kind
 import Data.Semigroup (Semigroup(..))
 import Data.Monoid (Monoid(..))
@@ -185,13 +186,21 @@ instance Floating a => Floating (DynQuantity a) where
 -- | 'DynQuantity's form a 'Semigroup' under multiplication, but not under addition because
 -- they may not be added together if their dimensions do not match.
 instance Num a => Semigroup (DynQuantity a) where
-    (<>) = (P.*)
+  (<>) = (P.*)
 
 -- | 'DynQuantity's form a 'Monoid' under multiplication, but not under addition because
 -- they may not be added together if their dimensions do not match.
 instance Num a => Monoid (DynQuantity a) where
   mempty = demoteQuantity (1 Dim.*~ one)
   mappend = (Data.Semigroup.<>)
+
+-- | 'DynQuantity's form a 'Group' under multiplication, but not under addition because
+-- they may not be added together if their dimensions do not match.
+instance Fractional a => Group (DynQuantity a) where
+  invert = P.recip
+  pow n x = n P.^ x
+
+instance Fractional a => Abelian (DynQuantity a)
 
 -- | A 'DynQuantity' which does not correspond to a value of any dimension.
 invalidQuantity :: DynQuantity a
@@ -282,6 +291,11 @@ instance Semigroup AnyUnit where
 instance Monoid AnyUnit where
   mempty = demoteUnit' one
   mappend = (Data.Semigroup.<>)
+
+-- | 'AnyUnit's form a 'Group' under multiplication.
+instance Group AnyUnit where
+  invert = recip
+  pow n x = n ^ x
 
 anyUnitName :: AnyUnit -> UnitName 'NonMetric
 anyUnitName (AnyUnit _ n _) = n

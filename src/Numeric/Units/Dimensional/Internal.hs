@@ -30,6 +30,7 @@ import Control.DeepSeq
 import Data.AEq (AEq)
 import Data.Coerce (coerce)
 import Data.Data
+import Data.Group
 import Data.Kind
 import Data.ExactPi
 import Data.Functor.Classes (Eq1(..), Ord1(..))
@@ -135,6 +136,12 @@ instance (Num a) => Semigroup (SQuantity s d a) where
 instance (Num a) => Monoid (SQuantity s d a) where
   mempty = Quantity 0
   mappend = liftQ2 (+)
+
+instance (Num a) => Group (SQuantity s d a) where
+  invert = dmap P.negate
+  pow (Quantity n) x = Quantity (n P.* (P.fromIntegral x))
+
+instance (Num a) => Abelian (SQuantity s d a)
 
 {-
 

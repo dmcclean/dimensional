@@ -37,6 +37,7 @@ where
 
 import Control.DeepSeq
 import Data.Data
+import Data.Group
 import Data.Semigroup (Semigroup(..))
 import Data.Monoid (Monoid(..))
 import GHC.Generics
@@ -65,6 +66,12 @@ instance Semigroup Dimension' where
 instance Monoid Dimension' where
   mempty = dOne
   mappend = (Data.Semigroup.<>)
+
+instance Group Dimension' where
+  invert = recip
+  pow n x = n ^ (P.fromIntegral x)
+
+instance Abelian Dimension'
 
 -- | The dimension of a dynamic value, which may not have any dimension at all.
 data DynamicDimension = NoDimension -- ^ The value has no valid dimension.

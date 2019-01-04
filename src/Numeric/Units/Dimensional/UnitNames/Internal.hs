@@ -9,7 +9,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE NumDecimals #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -22,6 +21,8 @@ import Control.DeepSeq
 import Control.Monad (join)
 import Data.Data hiding (Prefix)
 import Data.Foldable (toList)
+import Data.Group
+import Data.Kind
 import qualified Data.Map as M
 import Data.Maybe (isJust)
 import Data.Ord
@@ -38,7 +39,7 @@ type UnitName m = UnitName' m NameAtom
 
 -- | The name of a unit, parameterized by a type constructor for name atoms of a certain 'NameAtomType' and by the
 -- 'Metricality' of the resulting unit name.
-data UnitName' (m :: Metricality) (a :: *) where
+data UnitName' (m :: Metricality) (a :: Type) where
   -- The name of the unit of dimensionless values.
   One :: UnitName' 'NonMetric a
   -- A name of an atomic unit to which metric prefixes may be applied.
@@ -149,6 +150,28 @@ asSimple :: UnitName' m a -> UnitName' 'NonMetric a
 asSimple n | isSimple n = weaken n
            | otherwise = grouped n
 
+evaluate :: (Group a) => UnitName' m a -> a
+evaluate One = mempty
+evaluate (MetricAtomic a) = a
+evaluate (Atomic a) = a
+evaluate (Prefixed p a) = p <> a
+evaluate (Product n1 n2) = evaluate n1 <> evaluate n2
+evaluate (Quotient n1 n2) = evaluate n1 <> (invert $ evaluate n2)
+evaluate (Power n x) = pow (evaluate n) x
+evaluate (Grouped n) = evaluate n
+evaluate (Weaken n) = evaluate n
+
+evaluateMolecules :: (Group b) => (NameMolecule a -> b) -> UnitName' m a -> b
+evaluateMolecules _ One = mempty
+evaluateMolecules f (MetricAtomic a) = f (NameMolecule Nothing a)
+evaluateMolecules f (Atomic a) = f (NameMolecule Nothing a)
+evaluateMolecules f (Prefixed p a) = f (NameMolecule (Just p) a)
+evaluateMolecules f (Product n1 n2) = evaluateMolecules f n1 <> evaluateMolecules f n2
+evaluateMolecules f (Quotient n1 n2) = evaluateMolecules f n1 <> (invert $ evaluateMolecules f n2)
+evaluateMolecules f (Power n x) = pow (evaluateMolecules f n) x
+evaluateMolecules f (Grouped n) = evaluateMolecules f n
+evaluateMolecules f (Weaken n) = evaluateMolecules f n
+
 -- | Convert a 'UnitName' to one in which explicit grouping expressions do not appear.
 eliminateGrouping :: UnitName' m a -> UnitName' m a
 eliminateGrouping (Product n1 n2) = Product (eliminateGrouping n1) (eliminateGrouping n2)
@@ -181,6 +204,20 @@ eliminateOnes (Grouped n) = case eliminateOnes n of
 eliminateOnes (Weaken n) = Weaken (eliminateOnes n)
 eliminateOnes n = n
 
+newtype MolecularUnitName a = MolecularUnitName (M.Map (NameMolecule a) Int)
+
+instance (Ord a) => Semigroup (MolecularUnitName a) where
+  (MolecularUnitName m1) <> (MolecularUnitName m2) = MolecularUnitName $ M.unionWith (P.+) m1 m2
+
+instance (Ord a) => Monoid (MolecularUnitName a) where
+  mempty = MolecularUnitName M.empty
+
+instance (Ord a) => Group (MolecularUnitName a) where
+  invert (MolecularUnitName m) = MolecularUnitName $ fmap P.negate m
+  pow (MolecularUnitName m) x = MolecularUnitName $ fmap (P.* (fromIntegral x)) m
+
+instance (Ord a) => Abelian (MolecularUnitName a)
+
 productNormalForm :: (Ord a) => UnitName' m a -> UnitName' m a
 productNormalForm n = case n of
                         (MetricAtomic _) -> n
@@ -210,14 +247,15 @@ quotientNormalForm n = case n of
   where
     go :: (Ord a) => UnitName' 'NonMetric a -> UnitName' 'NonMetric a
     go = fromMolecules . partitionMolecules . toMolecules
-    partitionMolecules :: M.Map (NameMolecule a) Int -> (M.Map (NameMolecule a) Int, M.Map (NameMolecule a) Int)
-    partitionMolecules = M.partition (> 0) . M.filter (/= 0)
-    fromMolecules :: (M.Map (NameMolecule a) Int, M.Map (NameMolecule a) Int) -> UnitName' 'NonMetric a
-    fromMolecules (ns, ds) | M.null ds = productOfMolecules ns
-                           | otherwise = Quotient (productOfMolecules ns) (productOfMolecules $ fmap negate ds)
+    partitionMolecules :: MolecularUnitName a -> (MolecularUnitName a, MolecularUnitName a)
+    partitionMolecules (MolecularUnitName m) = (\(x,y) -> (MolecularUnitName x, MolecularUnitName y)) . M.partition (> 0) . M.filter (/= 0) $ m
+    fromMolecules :: (MolecularUnitName a, MolecularUnitName a) -> UnitName' 'NonMetric a
+    fromMolecules (ns, ds) = case productOfMolecules ds of
+                               One -> productOfMolecules ns
+                               ds' -> Quotient (productOfMolecules ns) ds'
 
-productOfMolecules :: M.Map (NameMolecule a) Int -> UnitName' 'NonMetric a
-productOfMolecules = product . fmap build . M.toList
+productOfMolecules :: MolecularUnitName a -> UnitName' 'NonMetric a
+productOfMolecules (MolecularUnitName m) = product . fmap build . M.toList $ m
   where
     build :: (NameMolecule a, Int) -> UnitName' 'NonMetric a
     build (_, 0) = One
@@ -226,16 +264,8 @@ productOfMolecules = product . fmap build . M.toList
     build ((NameMolecule (Just p) a), x) = Power (Prefixed p a) x
     build ((NameMolecule Nothing a), x) = Power (Atomic a) x
 
-toMolecules :: (Ord a) => UnitName' m a -> M.Map (NameMolecule a) Int
-toMolecules One = M.empty
-toMolecules (Atomic n) = M.singleton (NameMolecule Nothing n) 1
-toMolecules (MetricAtomic n) = M.singleton (NameMolecule Nothing n) 1
-toMolecules (Prefixed p n) = M.singleton (NameMolecule (Just p) n) 1
-toMolecules (Product n1 n2) = M.unionWith (+) (toMolecules n1) (toMolecules n2)
-toMolecules (Quotient n1 n2) = M.unionWith (+) (toMolecules n1) (fmap negate $ toMolecules n2)
-toMolecules (Power n x) = fmap (P.* x) $ toMolecules n
-toMolecules (Grouped n) = toMolecules n
-toMolecules (Weaken n) = toMolecules n
+toMolecules :: (Ord a) => UnitName' m a -> MolecularUnitName a
+toMolecules = evaluateMolecules (\m -> MolecularUnitName $ M.singleton m 1)
 
 -- reduce by algebraic simplifications
 {-# DEPRECATED reduce "This function has strange and undocumented semantics, and will be removed in favor of more clearly documented algebraic maniupulation functions." #-}
