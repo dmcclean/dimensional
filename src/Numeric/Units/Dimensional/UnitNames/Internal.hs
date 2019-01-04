@@ -65,7 +65,7 @@ deriving instance Functor (UnitName' m)
 deriving instance (Eq a) => Eq (UnitName' m a)
 
 -- As it is for a GADT, this instance cannot be derived or use the generic default implementation
-instance NFData (UnitName m) where
+instance (NFData a) => NFData (UnitName' m a) where
   rnf n = case n of
     One -> ()
     MetricAtomic a -> rnf a
@@ -120,7 +120,7 @@ asAtomic (Weaken n) = asAtomic n
 asAtomic _ = Nothing
 
 -- | A 'UnitName' is atomic if it is an atom or a weakening of an atom.
-isAtomic :: UnitName m -> Bool
+isAtomic :: UnitName' m a -> Bool
 isAtomic = isJust . asAtomic
 
 asMolecular :: UnitName' m a -> Maybe (NameMolecule a)
@@ -353,15 +353,15 @@ infixr 8  ^
 infixl 7  *, /
 
 -- | Form a 'UnitName' by taking the product of two others.
-(*) :: UnitName m1 -> UnitName m2 -> UnitName 'NonMetric
+(*) :: UnitName' m1 a -> UnitName' m2 a -> UnitName' 'NonMetric a
 a * b = Product (weaken a) (weaken b)
 
 -- | Form a 'UnitName' by dividing one by another.
-(/) :: UnitName m1 -> UnitName m2 -> UnitName 'NonMetric
+(/) :: UnitName' m1 a -> UnitName' m2 a -> UnitName' 'NonMetric a
 n1 / n2 = Quotient (weaken n1) (weaken n2)
 
 -- | Form a 'UnitName' by raising a name to an integer power.
-(^) :: UnitName m -> Int -> UnitName 'NonMetric
+(^) :: UnitName' m a -> Int -> UnitName' 'NonMetric a
 x ^ n = Power (weaken x) n
 
 -- | Convert a 'UnitName' which may or may not be 'Metric' to one
@@ -451,10 +451,10 @@ atomic :: String -- ^ Abbreviated name in international English
 atomic a f ns = Atomic $ atom a f ns
 
 -- | The type of a unit name transformation that may be associated with an operation that takes a single unit as input.
-type UnitNameTransformer = (forall m.UnitName m -> UnitName 'NonMetric)
+type UnitNameTransformer = (forall m a.UnitName' m a -> UnitName' 'NonMetric a)
 
 -- | The type of a unit name transformation that may be associated with an operation that takes two units as input.
-type UnitNameTransformer2 = (forall m1 m2.UnitName m1 -> UnitName m2 -> UnitName 'NonMetric)
+type UnitNameTransformer2 = (forall m1 m2 a.UnitName' m1 a -> UnitName' m2 a -> UnitName' 'NonMetric a)
 
 -- | Forms the product of a list of 'UnitName's.
 --
