@@ -26,6 +26,7 @@ import Data.Kind
 import qualified Data.Map as M
 import Data.Maybe (isJust)
 import Data.Ord
+import Data.Semigroup (Semigroup(..))
 import GHC.Generics hiding (Prefix)
 import Numeric.Units.Dimensional.Dimensions.TermLevel (Dimension', asList, HasDimension(..))
 import Numeric.Units.Dimensional.UnitNames.Atoms
@@ -154,9 +155,9 @@ evaluate :: (Group a) => UnitName' m a -> a
 evaluate One = mempty
 evaluate (MetricAtomic a) = a
 evaluate (Atomic a) = a
-evaluate (Prefixed p a) = p <> a
-evaluate (Product n1 n2) = evaluate n1 <> evaluate n2
-evaluate (Quotient n1 n2) = evaluate n1 <> (invert $ evaluate n2)
+evaluate (Prefixed p a) = p `mappend` a
+evaluate (Product n1 n2) = evaluate n1 `mappend` evaluate n2
+evaluate (Quotient n1 n2) = evaluate n1 `mappend` (invert $ evaluate n2)
 evaluate (Power n x) = pow (evaluate n) x
 evaluate (Grouped n) = evaluate n
 evaluate (Weaken n) = evaluate n
@@ -166,8 +167,8 @@ evaluateMolecules _ One = mempty
 evaluateMolecules f (MetricAtomic a) = f (NameMolecule Nothing a)
 evaluateMolecules f (Atomic a) = f (NameMolecule Nothing a)
 evaluateMolecules f (Prefixed p a) = f (NameMolecule (Just p) a)
-evaluateMolecules f (Product n1 n2) = evaluateMolecules f n1 <> evaluateMolecules f n2
-evaluateMolecules f (Quotient n1 n2) = evaluateMolecules f n1 <> (invert $ evaluateMolecules f n2)
+evaluateMolecules f (Product n1 n2) = evaluateMolecules f n1 `mappend` evaluateMolecules f n2
+evaluateMolecules f (Quotient n1 n2) = evaluateMolecules f n1 `mappend` (invert $ evaluateMolecules f n2)
 evaluateMolecules f (Power n x) = pow (evaluateMolecules f n) x
 evaluateMolecules f (Grouped n) = evaluateMolecules f n
 evaluateMolecules f (Weaken n) = evaluateMolecules f n
@@ -211,6 +212,7 @@ instance (Ord a) => Semigroup (MolecularUnitName a) where
 
 instance (Ord a) => Monoid (MolecularUnitName a) where
   mempty = MolecularUnitName M.empty
+  mappend = (<>)
 
 instance (Ord a) => Group (MolecularUnitName a) where
   invert (MolecularUnitName m) = MolecularUnitName $ fmap P.negate m
