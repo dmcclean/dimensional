@@ -87,7 +87,7 @@ instance Show (UnitName m) where
 stringName :: (NameAtom -> String) -> (forall a.HasUnitName a => a -> String)
 stringName f = foldString . fmap f . ensureSimpleDenominatorsAndPowers . unitName
 
-foldString :: (IsString a, Monoid a) => UnitName' m a -> a
+foldString :: (IsString a, Semigroup a) => UnitName' m a -> a
 foldString = foldName $ UnitNameFold {
     foldOne = fromString "1"
   , foldPrefix = (<>)
