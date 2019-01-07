@@ -3,7 +3,7 @@
 module Numeric.Units.Dimensional.UnitNamesSpec where
 
 import Numeric.Units.Dimensional.UnitNames
-import Numeric.Units.Dimensional.UnitNames.Internal (UnitName'(..), eliminateOnes, eliminateGrouping, eliminateRedundantPowers)
+import Numeric.Units.Dimensional.UnitNames.Internal (UnitName'(..), eliminateOnes, eliminateGrouping, eliminateRedundantPowers, distributePowers)
 import Numeric.Units.Dimensional.UnitNames.Atoms (atom)
 import Numeric.Units.Dimensional.UnitNames.Languages
 import Numeric.Units.Dimensional.Prelude hiding ((*), (/), product, weaken)
@@ -91,9 +91,18 @@ spec = do
                 let n = name' $ (ampere D.* one D.^ pos3)
                 let n' = name' $ (ampere D.* one)
                 eliminateRedundantPowers n `shouldBe`n'
+              it "eliminates nested exponents" $ do
+                let n = name' $ ((meter D.^ neg1) D.^ pos2 D.* kilo gram)
+                let n' = name' $ (meter D.^ neg2 D.* kilo gram)
+                eliminateRedundantPowers n `shouldBe`n'
               it "preserves other exponents" $ do
                 let n = name' $ (ampere D./ meter D.^ pos2)
                 eliminateRedundantPowers n `shouldBe`n
+            describe "with distributePowers" $ do
+              it "distributes powers to molecules" $ do
+                let n = name' $ liter D./ D.grouped ((kilo gram D.* meter) D.^ pos2)
+                let n' = name' $ liter D./ D.grouped (kilo gram D.^pos2 D.* meter D.^ pos2)
+                distributePowers n `shouldBe` n'
           describe "Unit name formatting" $ do
             it "formats atomic unit names" $ do
               let n = name' ampere

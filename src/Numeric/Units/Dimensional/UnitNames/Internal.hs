@@ -9,6 +9,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -172,15 +173,14 @@ asSimple n | isSimple n = weaken n
            | otherwise = grouped n
 
 evaluate :: (Group a) => UnitName' m a -> a
-evaluate One = mempty
-evaluate (MetricAtomic a) = a
-evaluate (Atomic a) = a
-evaluate (Prefixed p a) = p `mappend` a
-evaluate (Product n1 n2) = evaluate n1 `mappend` evaluate n2
-evaluate (Quotient n1 n2) = evaluate n1 `mappend` (invert $ evaluate n2)
-evaluate (Power n x) = pow (evaluate n) x
-evaluate (Grouped n) = evaluate n
-evaluate (Weaken n) = evaluate n
+evaluate = foldName $ UnitNameFold {
+    foldOne = mempty
+  , foldPrefix = mappend
+  , foldProduct = mappend
+  , foldQuotient = \n1 n2 -> n1 `mappend` (invert n2)
+  , foldPower = pow
+  , foldGrouped = id
+  }
 
 evaluateMolecules :: (Group b) => (NameMolecule a -> b) -> UnitName' m a -> b
 evaluateMolecules _ One = mempty
@@ -229,12 +229,33 @@ eliminateRedundantPowers :: UnitName' m a -> UnitName' m a
 eliminateRedundantPowers (Product n1 n2) = Product (eliminateRedundantPowers n1) (eliminateRedundantPowers n2)
 eliminateRedundantPowers (Quotient n1 n2) = Quotient (eliminateRedundantPowers n1) (eliminateRedundantPowers n2)
 eliminateRedundantPowers (Power One _) = One
+eliminateRedundantPowers (Power (Power n x1) x2) = eliminateRedundantPowers (Power n (x1 P.* x2))
 eliminateRedundantPowers n@(Power n' x) | x == 0 = One
                                         | x == 1 = eliminateRedundantPowers n'
                                         | otherwise = n
 eliminateRedundantPowers (Grouped n) = Grouped (eliminateRedundantPowers n)
 eliminateRedundantPowers (Weaken n) = Weaken (eliminateRedundantPowers n)
 eliminateRedundantPowers n = n
+
+distributePowers :: UnitName' m a -> UnitName' m a
+distributePowers = \case
+                      (Product n1 n2) -> Product (distributePowers n1) (distributePowers n2)
+                      (Quotient n1 n2) -> Quotient (distributePowers n1) (distributePowers n2)
+                      n@(Power _ _) -> go 1 n
+                      (Grouped n) -> Grouped (distributePowers n)
+                      (Weaken n) -> Weaken (distributePowers n)
+                      One -> One
+                      n@(Atomic _) -> n
+                      n@(MetricAtomic _) -> n
+                      n@(Prefixed _ _) -> n
+  where
+    go :: Int -> UnitName' m a -> UnitName' 'NonMetric a
+    go x (Product n1 n2) = Product (go x n1) (go x n2)
+    go x (Quotient n1 n2) = Quotient (go x n1) (go x n2)
+    go x (Power n x') = go (x P.* x') n
+    go x (Grouped n) = Grouped (go x n)
+    go x (Weaken n) = weaken (go x n)
+    go x n = Power (weaken n) x
 
 ensureSimpleDenominatorsAndPowers :: UnitName' m a -> UnitName' m a
 ensureSimpleDenominatorsAndPowers (Product n1 n2) = Product (ensureSimpleDenominatorsAndPowers n1) (ensureSimpleDenominatorsAndPowers n2)
@@ -476,31 +497,26 @@ grouped :: UnitName' m a -> UnitName' 'NonMetric a
 grouped = Grouped . weaken
 
 ucumName :: (HasUnitName a) => a -> Maybe String
-ucumName = ucumName' . unitName
+ucumName = foldName f . fmap (nameComponent ucum) . ensureSimpleDenominatorsAndPowers . distributePowers . unitName
   where
-    ucumName' :: UnitName m -> Maybe String
-    ucumName' One = Just "1"
-    ucumName' (MetricAtomic a) = nameComponent ucum a
-    ucumName' (Atomic a) = nameComponent ucum a
-    ucumName' (Prefixed p n) = (++) <$> nameComponent ucum p <*> nameComponent ucum n
-    ucumName' (Product n1 n2) = do
-                                  n1' <- ucumName' n1
-                                  n2' <- ucumName' n2
-                                  return $ n1' ++ "." ++ n2'
-    -- TODO: does one of these subexpressions require a grouping if it is itself a quotient? seems like it must
-    -- we did it at construction time, but if we are going to expose the constructors then we need to do it again.
-    ucumName' (Quotient n1 n2) = do
-                                   n1' <- ucumName' n1
-                                   n2' <- ucumName' n2
-                                   return $ n1' ++ "/" ++ n2'
-    -- TODO #109: note in this case that the UCUM is changing their grammar to not accept exponents after
-    -- as a result it will become necessary to distribute the exponentiation over the items in the base name
-    -- prior to generating the UCUM name
-    ucumName' (Power n x) = do
-                              n' <- ucumName' n
-                              return $ n' ++ show x
-    ucumName' (Grouped n) = (\x -> "(" ++ x ++ ")") <$> ucumName' n
-    ucumName' (Weaken n) = ucumName' n
+    f = UnitNameFold {
+      foldOne = Just "1"
+    , foldPrefix = liftA2 (++)
+    , foldProduct = \n1 n2 -> do
+                                n1' <- n1
+                                n2' <- n2
+                                return $ n1' ++ "." ++ n2'
+    , foldQuotient = \n1 n2 -> do
+                                 n1' <- n1
+                                 n2' <- n2
+                                 return $ n1' ++ "/" ++ n2'
+    , foldPower = \n x -> do
+                            n' <- n
+                            return $ n' ++ show x
+    , foldGrouped = \n -> do
+                            n' <- n
+                            return $ "(" ++ n' ++ ")"
+    }
 
 prefix :: String -> String -> String -> Int -> Prefix
 prefix i a f = Prefix n
