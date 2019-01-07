@@ -201,7 +201,7 @@ module Numeric.Units.Dimensional
     -- $constants
     _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, pi, tau,
     -- * Constructing Units
-    siUnit, one, mkUnitR, mkUnitQ, mkUnitZ,
+    siUnit, one, mkUnitR, mkUnitQ, mkUnitZ, grouped,
     -- * Unit Metadata
     name, exactValue, weaken, strengthen, exactify,
     -- * Pretty Printing
@@ -233,7 +233,7 @@ import Data.Ratio
 import qualified Numeric
 import Numeric.Units.Dimensional.Dimensions
 import Numeric.Units.Dimensional.Internal
-import Numeric.Units.Dimensional.UnitNames hiding ((*), (/), (^), weaken, strengthen, product)
+import Numeric.Units.Dimensional.UnitNames hiding ((*), (/), (^), weaken, strengthen, product, grouped)
 import qualified Numeric.Units.Dimensional.UnitNames.Internal as Name
 import Numeric.Units.Dimensional.Variants hiding (type (*), type (/))
 import qualified Numeric.Units.Dimensional.Variants as V
@@ -778,3 +778,9 @@ mkUnitZ n s (Unit _ e x) | s == 0    = error "Supplying zero as a conversion fac
   where
     e' = fromInteger s Prelude.* e
     x' = fromInteger s Prelude.* x
+
+-- | Forms a new 'NonMetric' unit by grouping the name of a specified 'Unit'.
+--
+-- This can be useful in controlling the formatting of the names of composite 'Unit's.
+grouped :: Unit m d a -> Unit 'NonMetric d a
+grouped (Unit n e x) = Unit (Name.grouped n) e x

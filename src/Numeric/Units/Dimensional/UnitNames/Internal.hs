@@ -27,6 +27,7 @@ import qualified Data.Map as M
 import Data.Maybe (isJust)
 import Data.Ord
 import Data.Semigroup (Semigroup(..))
+import Data.String (IsString(..))
 import GHC.Generics hiding (Prefix)
 import Numeric.Units.Dimensional.Dimensions.TermLevel (Dimension', asList, HasDimension(..))
 import Numeric.Units.Dimensional.UnitNames.Atoms
@@ -84,18 +85,37 @@ instance Show (UnitName m) where
   show = abbreviation_en
 
 stringName :: (NameAtom -> String) -> (forall a.HasUnitName a => a -> String)
-stringName f = go . fmap f . unitName
-  where
-    go :: UnitName' m String -> String
-    go One = "1"
-    go (MetricAtomic a) = a
-    go (Atomic a) = a
-    go (Prefixed a n) = a ++ n
-    go (Product n1 n2) = go n1 ++ "\xA0" ++ go n2
-    go (Quotient n1 n2) = go n1 ++ "\xA0/\xA0" ++ go (asSimple n2)
-    go (Power x n) = go (asSimple x) ++ "^" ++ show n
-    go (Grouped n) = "(" ++ go n ++ ")"
-    go (Weaken n) = go n
+stringName f = foldString . fmap f . ensureSimpleDenominatorsAndPowers . unitName
+
+foldString :: (IsString a, Monoid a) => UnitName' m a -> a
+foldString = foldName $ UnitNameFold {
+    foldOne = fromString "1"
+  , foldPrefix = (<>)
+  , foldProduct = \n1 n2 -> n1 <> fromString "\xA0" <> n2
+  , foldQuotient = \n1 n2 -> n1 <> fromString "\xA0/\xA0" <> n2
+  , foldPower = \n x -> n <> fromString "^" <> fromString (show x)
+  , foldGrouped = \n -> fromString "(" <> n <> fromString ")"
+  }
+
+foldName :: UnitNameFold a -> UnitName' m a -> a
+foldName f One = foldOne f
+foldName _ (MetricAtomic a) = a
+foldName _ (Atomic a) = a
+foldName f (Prefixed p n) = foldPrefix f p n
+foldName f (Product n1 n2) = foldProduct f (foldName f n1) (foldName f n2)
+foldName f (Quotient n1 n2) = foldQuotient f (foldName f n1) (foldName f n2)
+foldName f (Power n x) = foldPower f (foldName f n) x
+foldName f (Grouped n) = foldGrouped f (foldName f n)
+foldName f (Weaken n) = foldName f n
+
+data UnitNameFold a = UnitNameFold 
+  { foldOne :: a
+  , foldPrefix :: a -> a -> a
+  , foldProduct :: a -> a -> a
+  , foldQuotient :: a -> a -> a
+  , foldPower :: a -> Int -> a
+  , foldGrouped :: a -> a
+  }
 
 class HasUnitName a where
   unitName :: a -> UnitName 'NonMetric
@@ -178,7 +198,7 @@ eliminateGrouping :: UnitName' m a -> UnitName' m a
 eliminateGrouping (Product n1 n2) = Product (eliminateGrouping n1) (eliminateGrouping n2)
 eliminateGrouping (Quotient n1 n2) = Quotient (eliminateGrouping n1) (eliminateGrouping n2)
 eliminateGrouping (Power n x) = Power (eliminateGrouping n) x
-eliminateGrouping (Grouped n) = n
+eliminateGrouping (Grouped n) = eliminateGrouping n
 eliminateGrouping (Weaken n) = Weaken (eliminateGrouping n)
 eliminateGrouping n = n
 
@@ -204,6 +224,26 @@ eliminateOnes (Grouped n) = case eliminateOnes n of
                               n' -> Grouped n'
 eliminateOnes (Weaken n) = Weaken (eliminateOnes n)
 eliminateOnes n = n
+
+eliminateRedundantPowers :: UnitName' m a -> UnitName' m a
+eliminateRedundantPowers (Product n1 n2) = Product (eliminateRedundantPowers n1) (eliminateRedundantPowers n2)
+eliminateRedundantPowers (Quotient n1 n2) = Quotient (eliminateRedundantPowers n1) (eliminateRedundantPowers n2)
+eliminateRedundantPowers (Power One _) = One
+eliminateRedundantPowers n@(Power n' x) | x == 0 = One
+                                        | x == 1 = eliminateRedundantPowers n'
+                                        | otherwise = n
+eliminateRedundantPowers (Grouped n) = Grouped (eliminateRedundantPowers n)
+eliminateRedundantPowers (Weaken n) = Weaken (eliminateRedundantPowers n)
+eliminateRedundantPowers n = n
+
+ensureSimpleDenominatorsAndPowers :: UnitName' m a -> UnitName' m a
+ensureSimpleDenominatorsAndPowers (Product n1 n2) = Product (ensureSimpleDenominatorsAndPowers n1) (ensureSimpleDenominatorsAndPowers n2)
+ensureSimpleDenominatorsAndPowers (Quotient n1 n2) = Quotient (ensureSimpleDenominatorsAndPowers n1) (asSimple $ ensureSimpleDenominatorsAndPowers n2)
+ensureSimpleDenominatorsAndPowers (Power One _) = One
+ensureSimpleDenominatorsAndPowers (Power n x) = Power (asSimple $ ensureSimpleDenominatorsAndPowers n) x
+ensureSimpleDenominatorsAndPowers (Grouped n) = Grouped (ensureSimpleDenominatorsAndPowers n)
+ensureSimpleDenominatorsAndPowers (Weaken n) = Weaken (ensureSimpleDenominatorsAndPowers n)
+ensureSimpleDenominatorsAndPowers n = n
 
 newtype MolecularUnitName a = MolecularUnitName (M.Map (NameMolecule a) Int)
 
