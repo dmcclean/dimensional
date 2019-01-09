@@ -90,7 +90,7 @@ instance Show (UnitName m) where
   show = abbreviation_en
 
 stringName :: (HasUnitName a) => (NameAtomType a -> String) -> a -> String
-stringName f = foldString . fmap f . ensureSimpleDenominatorsAndPowers . weaken . name
+stringName f = foldString . fmap f . applyTransform ensureSimpleDenominatorsAndPowers . weaken . name
 
 foldString :: (IsString a, Semigroup a) => UnitName' m a -> a
 foldString = foldName $ UnitNameFold {
@@ -202,61 +202,61 @@ evaluateMolecules f (Grouped n) = evaluateMolecules f n
 evaluateMolecules f (Weaken n) = evaluateMolecules f n
 
 -- | Convert a 'UnitName' to one in which explicit grouping expressions do not appear.
-eliminateGrouping :: UnitName' m a -> UnitName' m a
-eliminateGrouping (Product n1 n2) = Product (eliminateGrouping n1) (eliminateGrouping n2)
-eliminateGrouping (Quotient n1 n2) = Quotient (eliminateGrouping n1) (eliminateGrouping n2)
-eliminateGrouping (Power n x) = Power (eliminateGrouping n) x
-eliminateGrouping (Grouped n) = eliminateGrouping n
-eliminateGrouping (Weaken n) = Weaken (eliminateGrouping n)
-eliminateGrouping n = n
+eliminateGrouping :: UnitNameTransform a
+eliminateGrouping = Transform go
+  where
+    go (Product n1 n2) = Product (go n1) (go n2)
+    go (Quotient n1 n2) = Quotient (go n1) (go n2)
+    go (Power n x) = Power (go n) x
+    go (Grouped n) = go n
+    go n = n
 
 -- | Convert a 'UnitName' to one in which inessential uses of 'One' have been eliminated.
 --
 -- Where 'One' appears in a 'Power' or 'Grouped' expression, that expression is eliminated.
 --
 -- A usage is essential if it is alone, or if it is alone in the numerator of a quotient.
-eliminateOnes :: UnitName' m a -> UnitName' m a
-eliminateOnes (Product n1 n2) = case (eliminateOnes n1, eliminateOnes n2) of
-                                  (One, One) -> One
-                                  (One, n) -> n
-                                  (n, One) -> n
-                                  (n1', n2') -> Product n1' n2'
-eliminateOnes (Quotient n1 n2) = case eliminateOnes n2 of
-                                   One -> eliminateOnes n1
-                                   n2' -> Quotient (eliminateOnes n1) n2'
-eliminateOnes (Power n x) = case eliminateOnes n of
-                              One -> One
-                              n' -> Power n' x
-eliminateOnes (Grouped n) = case eliminateOnes n of
-                              One -> One
-                              n' -> Grouped n'
-eliminateOnes (Weaken n) = Weaken (eliminateOnes n)
-eliminateOnes n = n
-
-eliminateRedundantPowers :: UnitName' m a -> UnitName' m a
-eliminateRedundantPowers (Product n1 n2) = Product (eliminateRedundantPowers n1) (eliminateRedundantPowers n2)
-eliminateRedundantPowers (Quotient n1 n2) = Quotient (eliminateRedundantPowers n1) (eliminateRedundantPowers n2)
-eliminateRedundantPowers (Power One _) = One
-eliminateRedundantPowers (Power (Power n x1) x2) = eliminateRedundantPowers (Power n (x1 P.* x2))
-eliminateRedundantPowers n@(Power n' x) | x == 0 = One
-                                        | x == 1 = eliminateRedundantPowers n'
-                                        | otherwise = n
-eliminateRedundantPowers (Grouped n) = Grouped (eliminateRedundantPowers n)
-eliminateRedundantPowers (Weaken n) = Weaken (eliminateRedundantPowers n)
-eliminateRedundantPowers n = n
-
-distributePowers :: UnitName' m a -> UnitName' m a
-distributePowers = \case
-                      (Product n1 n2) -> Product (distributePowers n1) (distributePowers n2)
-                      (Quotient n1 n2) -> Quotient (distributePowers n1) (distributePowers n2)
-                      n@(Power _ _) -> go 1 n
-                      (Grouped n) -> Grouped (distributePowers n)
-                      (Weaken n) -> Weaken (distributePowers n)
-                      One -> One
-                      n@(Atomic _) -> n
-                      n@(MetricAtomic _) -> n
-                      n@(Prefixed _ _) -> n
+eliminateOnes :: UnitNameTransform a
+eliminateOnes = Transform go
   where
+    go (Product n1 n2) = case (go n1, go n2) of
+                            (One, One) -> One
+                            (One, n) -> n
+                            (n, One) -> n
+                            (n1', n2') -> Product n1' n2'
+    go (Quotient n1 n2) = case go n2 of
+                            One -> go n1
+                            n2' -> Quotient (go n1) n2'
+    go (Power n x) = case go n of
+                        One -> One
+                        n' -> Power n' x
+    go (Grouped n) = case go n of
+                        One -> One
+                        n' -> Grouped n'
+    go n = n
+
+eliminateRedundantPowers :: UnitNameTransform a
+eliminateRedundantPowers = Transform go
+  where
+    go (Product n1 n2) = Product (go n1) (go n2)
+    go (Quotient n1 n2) = Quotient (go n1) (go n2)
+    go (Power One _) = One
+    go (Power (Power n x1) x2) = go (Power n (x1 P.* x2))
+    go n@(Power n' x) | x == 0 = One
+                      | x == 1 = go n'
+                      | otherwise = n
+    go (Grouped n) = Grouped (go n)
+    go n = n
+
+distributePowers :: UnitNameTransform a
+distributePowers = Transform dp
+  where
+    dp = \case
+            (Product n1 n2) -> Product (dp n1) (dp n2)
+            (Quotient n1 n2) -> Quotient (dp n1) (dp n2)
+            n@(Power _ _) -> go 1 n
+            (Grouped n) -> Grouped (dp n)
+            n -> n
     go :: Int -> UnitName' m a -> UnitName' 'NonMetric a
     go x (Product n1 n2) = Product (go x n1) (go x n2)
     go x (Quotient n1 n2) = Quotient (go x n1) (go x n2)
@@ -265,14 +265,15 @@ distributePowers = \case
     go x (Weaken n) = weaken (go x n)
     go x n = Power (weaken n) x
 
-ensureSimpleDenominatorsAndPowers :: UnitName' m a -> UnitName' m a
-ensureSimpleDenominatorsAndPowers (Product n1 n2) = Product (ensureSimpleDenominatorsAndPowers n1) (ensureSimpleDenominatorsAndPowers n2)
-ensureSimpleDenominatorsAndPowers (Quotient n1 n2) = Quotient (ensureSimpleDenominatorsAndPowers n1) (asSimple $ ensureSimpleDenominatorsAndPowers n2)
-ensureSimpleDenominatorsAndPowers (Power One _) = One
-ensureSimpleDenominatorsAndPowers (Power n x) = Power (asSimple $ ensureSimpleDenominatorsAndPowers n) x
-ensureSimpleDenominatorsAndPowers (Grouped n) = Grouped (ensureSimpleDenominatorsAndPowers n)
-ensureSimpleDenominatorsAndPowers (Weaken n) = Weaken (ensureSimpleDenominatorsAndPowers n)
-ensureSimpleDenominatorsAndPowers n = n
+ensureSimpleDenominatorsAndPowers :: UnitNameTransform a
+ensureSimpleDenominatorsAndPowers = Transform go
+  where
+    go (Product n1 n2) = Product (go n1) (go n2)
+    go (Quotient n1 n2) = Quotient (go n1) (asSimple $ go n2)
+    go (Power One _) = One
+    go (Power n x) = Power (asSimple $ go n) x
+    go (Grouped n) = Grouped (go n)
+    go n = n
 
 productNormalForm :: (Ord a) => UnitNameTransform a
 productNormalForm = NormalForm productOfMolecules
@@ -428,7 +429,7 @@ grouped :: UnitName' m a -> UnitName' 'NonMetric a
 grouped = Grouped . weaken
 
 ucumName :: (HasUnitName a, NameAtomType a ~ NameAtom) => a -> Maybe String
-ucumName = fmap (foldName f) . traverse (nameComponent ucum) . ensureSimpleDenominatorsAndPowers . distributePowers . name
+ucumName = fmap (foldName f) . traverse (nameComponent ucum) . applyTransform (ensureSimpleDenominatorsAndPowers <> distributePowers) . name
   where
     f = UnitNameFold {
       foldOne = "1"

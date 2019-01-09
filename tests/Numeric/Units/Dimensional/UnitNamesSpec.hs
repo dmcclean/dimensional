@@ -55,55 +55,55 @@ spec = do
               it "properly eliminates redundant One from products" $ do
                 let n = name' $ meter D.* one D.* D.kilo gram D.* one
                 let n' = name' $ meter D.* D.kilo gram
-                eliminateOnes n `shouldBe` n'
+                applyTransform eliminateOnes n `shouldBe` n'
               it "properly eliminates redundant One from denominator" $ do
                 let n = name' $ meter D./ (one D.* one)
                 let n' = name'' meter
-                eliminateOnes n `shouldBe` n'
+                applyTransform eliminateOnes n `shouldBe` n'
               it "properly eliminates powers of One" $ do
                 let n = name' $ meter D.* one D.^ pos3 D.* liter D./ (one D.^ neg1)
                 let n' = name' $ meter D.* liter
-                eliminateOnes n `shouldBe` n'
+                applyTransform eliminateOnes n `shouldBe` n'
               it "properly eliminates grouped appearances of One" $ do
                 let n = name' $ D.grouped (one D.* meter)
                 let n' = name' $ D.grouped meter
-                eliminateOnes n `shouldBe` n'
+                applyTransform eliminateOnes n `shouldBe` n'
             describe "with eliminateGrouping" $ do
               it "eliminates grouping" $ do
                 let n = name' $ D.grouped $ D.grouped meter
                 let n' = name'' meter
-                eliminateGrouping n `shouldBe` n'
+                applyTransform eliminateGrouping n `shouldBe` n'
               it "eliminates grouping under products" $ do
                 let u' = mole D./ liter
                 let u = D.grouped $ D.grouped u'
                 let n = name' $ u D.* (u D./ u)
                 let n' = name' $ u' D.* (u' D./ u')
-                eliminateGrouping n `shouldBe` n'
+                applyTransform eliminateGrouping n `shouldBe` n'
             describe "with eliminateRedundantPowers" $ do
               it "eliminates zero exponents" $ do
                 let n = name' $ ampere D.* meter D.^ zero
                 let n' = name' $ ampere D.* one
-                eliminateRedundantPowers n `shouldBe`n'
+                applyTransform eliminateRedundantPowers n `shouldBe`n'
               it "eliminates one exponents" $ do
                 let n = name' $ ampere D./ meter D.^ pos1
                 let n' = name' $ ampere D./ meter
-                eliminateRedundantPowers n `shouldBe`n'
+                applyTransform eliminateRedundantPowers n `shouldBe`n'
               it "eliminates exponents of One" $ do
                 let n = name' $ ampere D.* one D.^ pos3
                 let n' = name' $ ampere D.* one
-                eliminateRedundantPowers n `shouldBe`n'
+                applyTransform eliminateRedundantPowers n `shouldBe`n'
               it "eliminates nested exponents" $ do
                 let n = name' $ (meter D.^ neg1) D.^ pos2 D.* kilo gram
                 let n' = name' $ meter D.^ neg2 D.* kilo gram
-                eliminateRedundantPowers n `shouldBe`n'
+                applyTransform eliminateRedundantPowers n `shouldBe`n'
               it "preserves other exponents" $ do
                 let n = name' $ ampere D./ meter D.^ pos2
-                eliminateRedundantPowers n `shouldBe`n
+                applyTransform eliminateRedundantPowers n `shouldBe`n
             describe "with distributePowers" $ do
               it "distributes powers to molecules" $ do
                 let n = name' $ liter D./ D.grouped ((kilo gram D.* meter) D.^ pos2)
                 let n' = name' $ liter D./ D.grouped (kilo gram D.^pos2 D.* meter D.^ pos2)
-                distributePowers n `shouldBe` n'
+                applyTransform distributePowers n `shouldBe` n'
             describe "with productNormalForm" $ do
               let pnf = applyTransform productNormalForm :: UnitName m -> UnitName m
               it "preserves One" $ do
