@@ -4,7 +4,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -33,6 +32,7 @@ import Data.String (IsString(..))
 import Numeric.Units.Dimensional.Dimensions.TermLevel (Dimension', asList, HasDimension(..))
 import Numeric.Units.Dimensional.UnitNames.Atoms
 import Numeric.Units.Dimensional.UnitNames.Languages
+import Numeric.Units.Dimensional.UnitNames.Molecules
 import Numeric.Units.Dimensional.UnitNames.Prefixes
 import Numeric.Units.Dimensional.Variants (Metricality(..))
 import Prelude hiding ((*), (/), (^), product)
@@ -51,7 +51,7 @@ data UnitName' (m :: Metricality) (a :: Type) where
   -- | A name of an atomic unit to which metric prefixes may not be applied.
   Atomic :: a -> UnitName' 'NonMetric a
   -- | A name of a prefixed unit.
-  Prefixed :: a -> a -> UnitName' 'NonMetric a
+  Prefixed :: Prefix' a -> a -> UnitName' 'NonMetric a
   -- | A compound name formed from the product of two names.
   Product :: UnitName' 'NonMetric a -> UnitName' 'NonMetric a -> UnitName' 'NonMetric a
   -- | A compound name formed from the quotient of two names.
@@ -92,7 +92,7 @@ stringName f = foldString . fmap f . ensureSimpleDenominatorsAndPowers . weaken 
 foldString :: (IsString a, Semigroup a) => UnitName' m a -> a
 foldString = foldName $ UnitNameFold {
     foldOne = fromString "1"
-  , foldPrefix = (<>)
+  , foldPrefix = \p n -> prefixName p <> n
   , foldProduct = \n1 n2 -> n1 <> fromString "\xA0" <> n2
   , foldQuotient = \n1 n2 -> n1 <> fromString "\xA0/\xA0" <> n2
   , foldPower = \n x -> n <> fromString "^" <> fromString (show x)
@@ -112,7 +112,7 @@ foldName f (Weaken n) = foldName f n
 
 data UnitNameFold a = UnitNameFold 
   { foldOne :: a
-  , foldPrefix :: a -> a -> a
+  , foldPrefix :: Prefix' a -> a -> a
   , foldProduct :: a -> a -> a
   , foldQuotient :: a -> a -> a
   , foldPower :: a -> Int -> a
@@ -180,7 +180,7 @@ asSimple n | isSimple n = weaken n
 evaluate :: (Group a) => UnitName' m a -> a
 evaluate = foldName $ UnitNameFold {
     foldOne = mempty
-  , foldPrefix = mappend
+  , foldPrefix = \p n -> prefixName p `mappend` n
   , foldProduct = mappend
   , foldQuotient = \n1 n2 -> n1 `mappend` (invert n2)
   , foldPower = pow
@@ -270,21 +270,6 @@ ensureSimpleDenominatorsAndPowers (Power n x) = Power (asSimple $ ensureSimpleDe
 ensureSimpleDenominatorsAndPowers (Grouped n) = Grouped (ensureSimpleDenominatorsAndPowers n)
 ensureSimpleDenominatorsAndPowers (Weaken n) = Weaken (ensureSimpleDenominatorsAndPowers n)
 ensureSimpleDenominatorsAndPowers n = n
-
-newtype MolecularUnitName a = MolecularUnitName (M.Map (NameMolecule a) Int)
-
-instance (Ord a) => Semigroup (MolecularUnitName a) where
-  (MolecularUnitName m1) <> (MolecularUnitName m2) = MolecularUnitName $ M.unionWith (P.+) m1 m2
-
-instance (Ord a) => Monoid (MolecularUnitName a) where
-  mempty = MolecularUnitName M.empty
-  mappend = (<>)
-
-instance (Ord a) => Group (MolecularUnitName a) where
-  invert (MolecularUnitName m) = MolecularUnitName $ fmap P.negate m
-  pow (MolecularUnitName m) x = MolecularUnitName $ fmap (P.* (fromIntegral x)) m
-
-instance (Ord a) => Abelian (MolecularUnitName a)
 
 productNormalForm :: (Ord a) => UnitName' m a -> UnitName' m a
 productNormalForm n = case n of
@@ -398,7 +383,7 @@ baseUnitNames = [weaken nMeter, nKilogram, weaken nSecond, weaken nAmpere, weake
 
 -- | Forms a 'UnitName' from a 'Metric' name by applying a metric prefix.
 applyPrefix :: Prefix -> UnitName 'Metric -> UnitName 'NonMetric
-applyPrefix p (MetricAtomic n) = Prefixed (prefixName p) n
+applyPrefix p (MetricAtomic n) = Prefixed p n
 
 {-
 We will reuse the operators and function names from the Prelude.
@@ -465,7 +450,7 @@ ucumName = foldName f . fmap (nameComponent ucum) . ensureSimpleDenominatorsAndP
   where
     f = UnitNameFold {
       foldOne = Just "1"
-    , foldPrefix = liftA2 (++)
+    , foldPrefix = \p n -> (++) <$> prefixName p <*> n
     , foldProduct = \n1 n2 -> do
                                 n1' <- n1
                                 n2' <- n2

@@ -11,7 +11,6 @@ module Numeric.Units.Dimensional.UnitNames.Atoms
 , atom
 , nameComponent
 , definiteNameComponent
-, NameMolecule(..)
 )
 where
 
@@ -29,10 +28,6 @@ type PrefixName = NameAtom
 -- | Represents the name of an atomic unit or prefix.
 newtype NameAtom
   = NameAtom (M.Map Language String) -- It's an invariant that internationalEnglish and internationalEnglishAbbreviation must appear as keys in the map. If the 'NameAtomType' is a prefix or metric, it must also contain 'ucum' as a key.
-  deriving (Eq, Ord, Data, Typeable, Generic, NFData)
-
-data NameMolecule a
-  = NameMolecule (Maybe a) a
   deriving (Eq, Ord, Data, Typeable, Generic, NFData)
 
 -- | Constructs a 'NameAtom' of some 'NameAtomType'.
