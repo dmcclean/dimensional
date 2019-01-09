@@ -38,7 +38,7 @@ where
 import Control.DeepSeq
 import Data.Data
 import Data.Group
-import Data.Semigroup (Semigroup(..))
+import Data.Semigroup (Semigroup(..), stimesMonoid)
 import Data.Monoid (Monoid(..))
 import GHC.Generics
 import Prelude (id, all, fst, snd, fmap, otherwise, divMod, ($), (+), (-), (.), (&&), Int, Show, Eq(..), Ord(..), Maybe(..), Bool(..))
@@ -61,6 +61,7 @@ instance NFData Dimension' where
 
 instance Semigroup Dimension' where
   (<>) = (*)
+  stimes = stimesMonoid
 
 -- | The monoid of dimensions under multiplication.
 instance Monoid Dimension' where
@@ -84,6 +85,7 @@ instance NFData DynamicDimension where
 -- | Dynamic dimensions form a 'Semigroup' under 'matchDimensions'.
 instance Semigroup DynamicDimension where
   (<>) = matchDimensions
+  stimes = stimesMonoid
 
 -- | Dynamic dimensions form a 'Monoid' under 'matchDimensions'. 'AnyDimension' is the identity.
 instance Monoid DynamicDimension where

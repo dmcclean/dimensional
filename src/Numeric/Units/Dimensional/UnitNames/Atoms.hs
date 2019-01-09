@@ -19,6 +19,7 @@ import Control.DeepSeq (NFData)
 import qualified Data.Char as C
 import Data.Data (Data, Typeable)
 import qualified Data.Map.Strict as M
+import Data.Ord (comparing)
 import GHC.Generics (Generic)
 import Numeric.Units.Dimensional.UnitNames.Languages
 
@@ -28,7 +29,10 @@ type PrefixName = NameAtom
 -- | Represents the name of an atomic unit or prefix.
 newtype NameAtom
   = NameAtom (M.Map Language String) -- It's an invariant that internationalEnglish and internationalEnglishAbbreviation must appear as keys in the map. If the 'NameAtomType' is a prefix or metric, it must also contain 'ucum' as a key.
-  deriving (Eq, Ord, Data, Typeable, Generic, NFData)
+  deriving (Eq, Data, Typeable, Generic, NFData)
+
+instance Ord NameAtom where
+  compare = comparing $ definiteNameComponent internationalEnglishAbbreviation
 
 -- | Constructs a 'NameAtom' of some 'NameAtomType'.
 atom :: String -- ^ Abbreviated name in international English

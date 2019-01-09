@@ -36,7 +36,7 @@ import Data.ExactPi
 import Data.Functor.Classes (Eq1(..), Ord1(..))
 import qualified Data.ExactPi.TypeLevel as E
 import Data.Monoid (Monoid(..))
-import Data.Semigroup (Semigroup(..))
+import Data.Semigroup (Semigroup(..), stimesMonoid)
 import Foreign.Ptr (Ptr, castPtr)
 import Foreign.Storable (Storable(..))
 import GHC.Generics
@@ -136,6 +136,7 @@ we will define a monoid instance that adds.
 -- | 'Quantity's of a given 'Dimension' form a 'Semigroup' under addition.
 instance (Num a) => Semigroup (SQuantity s d a) where
   (<>) = liftQ2 (+)
+  stimes = stimesMonoid
 
 -- | 'Quantity's of a given 'Dimension' form a 'Monoid' under addition.
 instance (Num a) => Monoid (SQuantity s d a) where

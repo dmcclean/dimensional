@@ -28,7 +28,7 @@ import Data.Kind
 import qualified Data.Map as M
 import Data.Maybe (isJust)
 import Data.Ord
-import Data.Semigroup (Semigroup(..))
+import Data.Semigroup (Semigroup(..), stimesMonoid)
 import Data.String (IsString(..))
 import Numeric.Units.Dimensional.Dimensions.TermLevel (Dimension', asList, HasDimension(..))
 import Numeric.Units.Dimensional.UnitNames.Atoms
@@ -155,9 +155,9 @@ isAtomic :: UnitName' m a -> Bool
 isAtomic = isJust . asAtomic
 
 asMolecular :: UnitName' m a -> Maybe (NameMolecule a)
-asMolecular (MetricAtomic a) = Just (NameMolecule Nothing a)
-asMolecular (Atomic a) = Just (NameMolecule Nothing a)
-asMolecular (Prefixed p a) = Just (NameMolecule (Just p) a)
+asMolecular (MetricAtomic a) = Just (NameMolecule Metric Nothing a)
+asMolecular (Atomic a) = Just (NameMolecule NonMetric Nothing a)
+asMolecular (Prefixed p a) = Just (NameMolecule NonMetric (Just p) a)
 asMolecular (Weaken n) = asMolecular n
 asMolecular _ = Nothing
 
@@ -192,9 +192,9 @@ evaluate = foldName $ UnitNameFold {
 
 evaluateMolecules :: (Group b) => (NameMolecule a -> b) -> UnitName' m a -> b
 evaluateMolecules _ One = mempty
-evaluateMolecules f (MetricAtomic a) = f (NameMolecule Nothing a)
-evaluateMolecules f (Atomic a) = f (NameMolecule Nothing a)
-evaluateMolecules f (Prefixed p a) = f (NameMolecule (Just p) a)
+evaluateMolecules f (MetricAtomic a) = f (NameMolecule Metric Nothing a)
+evaluateMolecules f (Atomic a) = f (NameMolecule NonMetric Nothing a)
+evaluateMolecules f (Prefixed p a) = f (NameMolecule NonMetric (Just p) a)
 evaluateMolecules f (Product n1 n2) = evaluateMolecules f n1 `mappend` evaluateMolecules f n2
 evaluateMolecules f (Quotient n1 n2) = evaluateMolecules f n1 `mappend` (invert $ evaluateMolecules f n2)
 evaluateMolecules f (Power n x) = pow (evaluateMolecules f n) x
@@ -274,37 +274,14 @@ ensureSimpleDenominatorsAndPowers (Grouped n) = Grouped (ensureSimpleDenominator
 ensureSimpleDenominatorsAndPowers (Weaken n) = Weaken (ensureSimpleDenominatorsAndPowers n)
 ensureSimpleDenominatorsAndPowers n = n
 
-productNormalForm :: (Ord a) => UnitName' m a -> UnitName' m a
-productNormalForm n = case n of
-                        (MetricAtomic _) -> n
-                        One -> n
-                        Atomic _ -> n
-                        Prefixed _ _ -> n
-                        Product _ _ -> go n
-                        Quotient _ _ -> go n
-                        Power _ _ -> go n
-                        Grouped _ -> go n
-                        Weaken _ -> go n
-  where
-    go :: (Ord a) => UnitName' 'NonMetric a -> UnitName' 'NonMetric a
-    go = productOfMolecules . toMolecules
+productNormalForm :: (Ord a) => UnitNameTransform a
+productNormalForm = NormalForm productOfMolecules
 
-quotientNormalForm :: (Ord a) => UnitName' m a -> UnitName' m a
-quotientNormalForm n = case n of
-                         (MetricAtomic _) -> n
-                         One -> n
-                         Atomic _ -> n
-                         Prefixed _ _ -> n
-                         Product _ _ -> go n
-                         Quotient _ _ -> go n
-                         Power _ _ -> go n
-                         Grouped _ -> go n
-                         Weaken _ -> go n
+quotientNormalForm :: (Ord a) => UnitNameTransform a
+quotientNormalForm = NormalForm $ fromMolecules . partitionMolecules
   where
-    go :: (Ord a) => UnitName' 'NonMetric a -> UnitName' 'NonMetric a
-    go = fromMolecules . partitionMolecules . toMolecules
     partitionMolecules :: MolecularUnitName a -> (MolecularUnitName a, MolecularUnitName a)
-    partitionMolecules (MolecularUnitName m) = (\(x,y) -> (MolecularUnitName x, MolecularUnitName y)) . M.partition (> 0) . M.filter (/= 0) $ m
+    partitionMolecules (MolecularUnitName m) = (\(x,y) -> (MolecularUnitName x, MolecularUnitName $ fmap negate y)) . M.partition (> 0) . M.filter (/= 0) $ m
     fromMolecules :: (MolecularUnitName a, MolecularUnitName a) -> UnitName' 'NonMetric a
     fromMolecules (ns, ds) = case productOfMolecules ds of
                                One -> productOfMolecules ns
@@ -315,10 +292,12 @@ productOfMolecules (MolecularUnitName m) = product . fmap build . M.toList $ m
   where
     build :: (NameMolecule a, Int) -> UnitName' 'NonMetric a
     build (_, 0) = One
-    build ((NameMolecule (Just p) a), 1) = Prefixed p a
-    build ((NameMolecule Nothing a), 1) = Atomic a
-    build ((NameMolecule (Just p) a), x) = Power (Prefixed p a) x
-    build ((NameMolecule Nothing a), x) = Power (Atomic a) x
+    build ((NameMolecule _ (Just p) a), 1) = Prefixed p a
+    build ((NameMolecule Metric Nothing a), 1) = Weaken (MetricAtomic a)
+    build ((NameMolecule NonMetric Nothing a), 1) = Atomic a
+    build ((NameMolecule _ (Just p) a), x) = Power (Prefixed p a) x
+    build ((NameMolecule Metric Nothing a), x) = Power (Weaken (MetricAtomic a)) x
+    build ((NameMolecule NonMetric Nothing a), x) = Power (Atomic a) x
 
 toMolecules :: (Ord a) => UnitName' m a -> MolecularUnitName a
 toMolecules = evaluateMolecules (\m -> MolecularUnitName $ M.singleton m 1)
@@ -492,5 +471,41 @@ product = go . toList
     -- valid but meaningless occurences of nOne.
     go :: [UnitName' 'NonMetric a] -> UnitName' 'NonMetric a
     go [] = One
-    go [n] = n
-    go (n : ns) = Product n (go ns)
+    go ns = foldl1 Product ns
+
+-- | A 'UnitNameTransform' is a function on 'UnitName'' which is guaranteed to preserve
+-- normal forms.
+data UnitNameTransform a where
+  Identity :: UnitNameTransform a
+  Compose :: UnitNameTransform a -> UnitNameTransform a -> UnitNameTransform a
+  Transform :: (UnitName' 'NonMetric a -> UnitName' 'NonMetric a) -> UnitNameTransform a
+  NormalForm :: (Ord a) => (MolecularUnitName a -> UnitName' 'NonMetric a) -> UnitNameTransform a
+
+-- | 'UnitNameTransformer's form a semigroup under composition.
+instance Semigroup (UnitNameTransform a) where
+  t <> Identity = t
+  Identity <> t = t
+  n@(NormalForm _) <> _ = n
+  t2 <> t1 = Compose t2 t1
+  stimes = stimesMonoid
+
+-- | 'UnitNameTransformer's form a monoid under composition.
+instance Monoid (UnitNameTransform a) where
+  mempty = Identity
+  mappend = (Data.Semigroup.<>)
+
+-- | Converts a 'UnitNameTransform' to a function on 'UnitName''s.
+applyTransform :: UnitNameTransform a -> UnitName' m a -> UnitName' m a
+applyTransform Identity = id
+applyTransform (Compose t2 t1) = applyTransform t2 . applyTransform t1
+applyTransform (NormalForm f) = applyTransform (Transform (f . toMolecules))
+applyTransform (Transform f) = \n -> case n of
+                                  (MetricAtomic _) -> n
+                                  One -> n
+                                  Atomic _ -> n
+                                  Prefixed _ _ -> n
+                                  Product _ _ -> f n
+                                  Quotient _ _ -> f n
+                                  Power _ _ -> f n
+                                  Grouped _ -> f n
+                                  Weaken _ -> f n
