@@ -382,7 +382,7 @@ baseUnitNames :: [UnitName 'NonMetric]
 baseUnitNames = [weaken nMeter, nKilogram, weaken nSecond, weaken nAmpere, weaken nKelvin, weaken nMole, weaken nCandela]
 
 -- | Forms a 'UnitName' from a 'Metric' name by applying a metric prefix.
-applyPrefix :: Prefix -> UnitName 'Metric -> UnitName 'NonMetric
+applyPrefix :: Prefix' a -> UnitName' 'Metric a -> UnitName' 'NonMetric a
 applyPrefix p (MetricAtomic n) = Prefixed p n
 
 {-
