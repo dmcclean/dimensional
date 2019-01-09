@@ -292,7 +292,7 @@ instance HasDimension AnyUnit where
 instance N.HasUnitName AnyUnit where
   type NameMetricality AnyUnit = 'NonMetric
   type NameAtomType AnyUnit = N.NameAtom
-  unitName (AnyUnit _ n _) = n
+  name (AnyUnit _ n _) = n
 
 -- | 'AnyUnit's form a 'Semigroup' under multiplication.
 instance Semigroup AnyUnit where
@@ -317,7 +317,7 @@ siUnit d = AnyUnit d (baseUnitName d) 1
 
 -- | Converts a 'Unit' of statically known 'Dimension' into an 'AnyUnit'.
 demoteUnit :: forall m d a.(KnownDimension d) => Unit m d a -> AnyUnit
-demoteUnit u = AnyUnit dim (N.weaken $ unitName u) (exactValue u)
+demoteUnit u = AnyUnit dim (N.weaken $ name u) (exactValue u)
   where
     dim = dimension (Proxy :: Proxy d)
 

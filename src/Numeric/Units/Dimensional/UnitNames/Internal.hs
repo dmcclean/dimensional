@@ -87,7 +87,7 @@ instance Show (UnitName m) where
   show = abbreviation_en
 
 stringName :: (HasUnitName a) => (NameAtomType a -> String) -> a -> String
-stringName f = foldString . fmap f . ensureSimpleDenominatorsAndPowers . weaken . unitName
+stringName f = foldString . fmap f . ensureSimpleDenominatorsAndPowers . weaken . name
 
 foldString :: (IsString a, Semigroup a) => UnitName' m a -> a
 foldString = foldName $ UnitNameFold {
@@ -122,12 +122,12 @@ data UnitNameFold a = UnitNameFold
 class HasUnitName a where
   type NameMetricality a :: Metricality
   type NameAtomType a :: Type
-  unitName :: a -> UnitName' (NameMetricality a) (NameAtomType a)
+  name :: a -> UnitName' (NameMetricality a) (NameAtomType a)
 
 instance HasUnitName (UnitName' m a) where
   type NameMetricality (UnitName' m a) = m
   type NameAtomType (UnitName' m a) = a
-  unitName = id
+  name = id
 
 abbreviation_en :: (HasUnitName a, NameAtomType a ~ NameAtom) => a -> String
 abbreviation_en = stringName $ definiteNameComponent internationalEnglishAbbreviation
@@ -461,7 +461,7 @@ grouped :: UnitName' m a -> UnitName' 'NonMetric a
 grouped = Grouped . weaken
 
 ucumName :: (HasUnitName a, NameAtomType a ~ NameAtom) => a -> Maybe String
-ucumName = foldName f . fmap (nameComponent ucum) . ensureSimpleDenominatorsAndPowers . distributePowers . unitName
+ucumName = foldName f . fmap (nameComponent ucum) . ensureSimpleDenominatorsAndPowers . distributePowers . name
   where
     f = UnitNameFold {
       foldOne = Just "1"

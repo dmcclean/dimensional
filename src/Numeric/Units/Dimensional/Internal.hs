@@ -123,7 +123,7 @@ instance Ord1 (SQuantity s d) where
 instance HasUnitName (Unit m d a) where
   type NameMetricality (Unit m d a) = m
   type NameAtomType (Unit m d a) = NameAtom
-  unitName (Unit n _ _) = n
+  name (Unit n _ _) = n
 
 {-
 Since quantities form a monoid under addition, but not under multiplication unless they are dimensionless,

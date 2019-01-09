@@ -203,7 +203,7 @@ module Numeric.Units.Dimensional
     -- * Constructing Units
     siUnit, one, mkUnitR, mkUnitQ, mkUnitZ, grouped,
     -- * Unit Metadata
-    unitName, name, exactValue, weaken, strengthen, exactify,
+    name, exactValue, weaken, strengthen, exactify,
     -- * Pretty Printing
     showIn,
     -- * On 'Functor', and Conversion Between Number Representations
@@ -274,11 +274,6 @@ number and a 'Unit'. We define the '*~' operator as a convenient
 way to declare quantities as such a product.
 
 -}
-
--- | Extracts the 'UnitName' of a 'Unit'.
-{-# DEPRECATED name "Deprecated in favor of unitName from the HasUnitName class." #-}
-name :: Unit m d a -> UnitName m
-name (Unit n _ _) = n
 
 -- | Extracts the exact value of a 'Unit', expressed in terms of the SI coherent derived unit (see 'siUnit') of the same 'Dimension'.
 --

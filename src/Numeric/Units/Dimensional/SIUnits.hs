@@ -92,7 +92,7 @@ applyMultiple :: (Num a) => Prefix -> Unit 'Metric d a -> Unit 'NonMetric d a
 applyMultiple p u | denominator x == 1 = mkUnitZ n' (numerator x) u
                   | otherwise = error "Attempt to apply a submultiple prefix as a multiple."
   where
-    n' = N.applyPrefix p (unitName u)
+    n' = N.applyPrefix p (name u)
     x = N.scaleFactor p
 
 deka, deca, hecto, kilo, mega, giga, tera, peta, exa, zetta, yotta
@@ -117,7 +117,7 @@ Then the submultiples.
 applyPrefix :: (Fractional a) => Prefix -> Unit 'Metric d a -> Unit 'NonMetric d a
 applyPrefix p u = mkUnitQ n' x u
   where
-    n' = N.applyPrefix p (unitName u)
+    n' = N.applyPrefix p (name u)
     x = N.scaleFactor p
 
 -- | Applies an optional 'Prefix' to a 'Metric' 'Unit', creating a 'NonMetric' unit.
