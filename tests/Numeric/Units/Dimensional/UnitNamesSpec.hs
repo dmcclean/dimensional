@@ -12,7 +12,7 @@ import Test.Hspec
 
 -- used to avoid type ambiguity
 name' :: Unit m d Double -> UnitName m
-name' = unitName
+name' = name
 
 -- used to avoid type ambiguity and weaken
 name'' :: Unit m d Double -> UnitName 'NonMetric
