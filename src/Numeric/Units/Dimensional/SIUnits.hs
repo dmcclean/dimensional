@@ -71,6 +71,7 @@ import qualified Numeric.Units.Dimensional.UnitNames as N
 import Numeric.Units.Dimensional.UnitNames.Internal (metricAtomic, atomic)
 import Numeric.Units.Dimensional.UnitNames.Languages (siunitx, usEnglish, ucum)
 import qualified Numeric.Units.Dimensional.UnitNames.Internal as I
+import qualified Numeric.Units.Dimensional.UnitNames.Prefixes as Prefix
 import Numeric.NumType.DK.Integers ( pos3 )
 import Prelude ( Eq(..), ($), (.), Num, Fractional, Floating, RealFrac(..), Maybe(..), otherwise, error, Ord(..), fst, snd, Int, Bool, fmap, mod, (&&))
 import qualified Prelude
@@ -91,22 +92,22 @@ applyMultiple :: (Num a) => Prefix -> Unit 'Metric d a -> Unit 'NonMetric d a
 applyMultiple p u | denominator x == 1 = mkUnitZ n' (numerator x) u
                   | otherwise = error "Attempt to apply a submultiple prefix as a multiple."
   where
-    n' = N.applyPrefix p (name u)
+    n' = N.applyPrefix p (unitName u)
     x = N.scaleFactor p
 
 deka, deca, hecto, kilo, mega, giga, tera, peta, exa, zetta, yotta
   :: Num a => Unit 'Metric d a -> Unit 'NonMetric d a
-deka  = applyMultiple I.deka -- International English.
+deka  = applyMultiple Prefix.deka -- International English.
 deca  = deka      -- American English.
-hecto = applyMultiple I.hecto
-kilo  = applyMultiple I.kilo
-mega  = applyMultiple I.mega
-giga  = applyMultiple I.giga
-tera  = applyMultiple I.tera
-peta  = applyMultiple I.peta
-exa   = applyMultiple I.exa
-zetta = applyMultiple I.zetta
-yotta = applyMultiple I.yotta
+hecto = applyMultiple Prefix.hecto
+kilo  = applyMultiple Prefix.kilo
+mega  = applyMultiple Prefix.mega
+giga  = applyMultiple Prefix.giga
+tera  = applyMultiple Prefix.tera
+peta  = applyMultiple Prefix.peta
+exa   = applyMultiple Prefix.exa
+zetta = applyMultiple Prefix.zetta
+yotta = applyMultiple Prefix.yotta
 
 {- $submultiples
 Then the submultiples.
@@ -116,7 +117,7 @@ Then the submultiples.
 applyPrefix :: (Fractional a) => Prefix -> Unit 'Metric d a -> Unit 'NonMetric d a
 applyPrefix p u = mkUnitQ n' x u
   where
-    n' = N.applyPrefix p (name u)
+    n' = N.applyPrefix p (unitName u)
     x = N.scaleFactor p
 
 -- | Applies an optional 'Prefix' to a 'Metric' 'Unit', creating a 'NonMetric' unit.
@@ -126,16 +127,16 @@ applyOptionalPrefix (Just p) = applyPrefix p
 
 deci, centi, milli, micro, nano, pico, femto, atto, zepto, yocto
   :: Fractional a => Unit 'Metric d a -> Unit 'NonMetric d a
-deci  = applyPrefix I.deci
-centi = applyPrefix I.centi
-milli = applyPrefix I.milli
-micro = applyPrefix I.micro
-nano  = applyPrefix I.nano
-pico  = applyPrefix I.pico
-femto = applyPrefix I.femto
-atto  = applyPrefix I.atto
-zepto = applyPrefix I.zepto
-yocto = applyPrefix I.yocto
+deci  = applyPrefix Prefix.deci
+centi = applyPrefix Prefix.centi
+milli = applyPrefix Prefix.milli
+micro = applyPrefix Prefix.micro
+nano  = applyPrefix Prefix.nano
+pico  = applyPrefix Prefix.pico
+femto = applyPrefix Prefix.femto
+atto  = applyPrefix Prefix.atto
+zepto = applyPrefix Prefix.zepto
+yocto = applyPrefix Prefix.yocto
 
 {- $reified-prefixes
 

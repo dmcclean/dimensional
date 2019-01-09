@@ -13,6 +13,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Numeric.Units.Dimensional.UnitNames.Internal
 where
@@ -29,10 +30,10 @@ import Data.Maybe (isJust)
 import Data.Ord
 import Data.Semigroup (Semigroup(..))
 import Data.String (IsString(..))
-import GHC.Generics hiding (Prefix)
 import Numeric.Units.Dimensional.Dimensions.TermLevel (Dimension', asList, HasDimension(..))
 import Numeric.Units.Dimensional.UnitNames.Atoms
 import Numeric.Units.Dimensional.UnitNames.Languages
+import Numeric.Units.Dimensional.UnitNames.Prefixes
 import Numeric.Units.Dimensional.Variants (Metricality(..))
 import Prelude hiding ((*), (/), (^), product)
 import qualified Prelude as P
@@ -40,26 +41,26 @@ import qualified Prelude as P
 -- | The name of a unit with the default choice of 'NameAtom' representation.
 type UnitName m = UnitName' m NameAtom
 
--- | The name of a unit, parameterized by a type constructor for name atoms of a certain 'NameAtomType' and by the
+-- | The name of a unit, parameterized by the type of name atoms and by the
 -- 'Metricality' of the resulting unit name.
 data UnitName' (m :: Metricality) (a :: Type) where
-  -- The name of the unit of dimensionless values.
+  -- | The name of the unit of dimensionless values.
   One :: UnitName' 'NonMetric a
-  -- A name of an atomic unit to which metric prefixes may be applied.
+  -- | A name of an atomic unit to which metric prefixes may be applied.
   MetricAtomic :: a -> UnitName' 'Metric a
-  -- A name of an atomic unit to which metric prefixes may not be applied.
+  -- | A name of an atomic unit to which metric prefixes may not be applied.
   Atomic :: a -> UnitName' 'NonMetric a
-  -- A name of a prefixed unit.
+  -- | A name of a prefixed unit.
   Prefixed :: a -> a -> UnitName' 'NonMetric a
-  -- A compound name formed from the product of two names.
+  -- | A compound name formed from the product of two names.
   Product :: UnitName' 'NonMetric a -> UnitName' 'NonMetric a -> UnitName' 'NonMetric a
-  -- A compound name formed from the quotient of two names.
+  -- | A compound name formed from the quotient of two names.
   Quotient :: UnitName' 'NonMetric a -> UnitName' 'NonMetric a -> UnitName' 'NonMetric a
-  -- A compound name formed by raising a unit name to an integer power.
+  -- | A compound name formed by raising a unit name to an integer power.
   Power :: UnitName' 'NonMetric a -> Int -> UnitName' 'NonMetric a
-  -- A compound name formed by grouping another name, which is generally compound.
+  -- | A compound name formed by grouping another name, which is generally compound.
   Grouped :: UnitName' 'NonMetric a -> UnitName' 'NonMetric a
-  -- A weakened name formed by forgetting that it could accept a metric prefix.
+  -- | A weakened name formed by forgetting that it could accept a metric prefix.
   --
   -- Also available is the smart constructor `weaken` which accepts any `UnitName` as input.
   Weaken :: UnitName' 'Metric a -> UnitName' 'NonMetric a
@@ -85,8 +86,8 @@ instance (NFData a) => NFData (UnitName' m a) where
 instance Show (UnitName m) where
   show = abbreviation_en
 
-stringName :: (NameAtom -> String) -> (forall a.HasUnitName a => a -> String)
-stringName f = foldString . fmap f . ensureSimpleDenominatorsAndPowers . unitName
+stringName :: (HasUnitName a) => (NameAtomType a -> String) -> a -> String
+stringName f = foldString . fmap f . ensureSimpleDenominatorsAndPowers . weaken . unitName
 
 foldString :: (IsString a, Semigroup a) => UnitName' m a -> a
 foldString = foldName $ UnitNameFold {
@@ -119,15 +120,19 @@ data UnitNameFold a = UnitNameFold
   }
 
 class HasUnitName a where
-  unitName :: a -> UnitName 'NonMetric
+  type NameMetricality a :: Metricality
+  type NameAtomType a :: Type
+  unitName :: a -> UnitName' (NameMetricality a) (NameAtomType a)
 
-instance HasUnitName (UnitName m) where
-  unitName = weaken
+instance HasUnitName (UnitName' m a) where
+  type NameMetricality (UnitName' m a) = m
+  type NameAtomType (UnitName' m a) = a
+  unitName = id
 
-abbreviation_en :: (HasUnitName a) => a -> String
+abbreviation_en :: (HasUnitName a, NameAtomType a ~ NameAtom) => a -> String
 abbreviation_en = stringName $ definiteNameComponent internationalEnglishAbbreviation
 
-name_en :: (HasUnitName a) => a -> String
+name_en :: (HasUnitName a, NameAtomType a ~ NameAtom) => a -> String
 name_en = stringName $ definiteNameComponent internationalEnglish
 
 prefixAbbreviationEnglish :: Prefix -> String
@@ -355,20 +360,6 @@ reduce' (Grouped n) = reduce' n
 reduce' n@(Weaken (MetricAtomic _)) = n
 reduce' n = n
 
-data Prefix = Prefix
-              {
-                -- | The name of a metric prefix.
-                prefixName :: PrefixName,
-                -- | The scale factor denoted by a metric prefix.
-                scaleExponent :: Int
-              }
-  deriving (Eq, Data, Typeable, Generic)
-
-instance Ord Prefix where
-  compare = comparing scaleExponent
-
-instance NFData Prefix where -- instance is derived from Generic instance
-
 -- | The name of the unit of dimensionless values.
 nOne :: UnitName 'NonMetric
 nOne = One
@@ -404,33 +395,6 @@ baseUnitName d = let powers = asList $ dimension d
 
 baseUnitNames :: [UnitName 'NonMetric]
 baseUnitNames = [weaken nMeter, nKilogram, weaken nSecond, weaken nAmpere, weaken nKelvin, weaken nMole, weaken nCandela]
-
-deka, hecto, kilo, mega, giga, tera, peta, exa, zetta, yotta :: Prefix
-deka  = prefix "da" "da" "deka" 1
-hecto = prefix "h" "h" "hecto"  2
-kilo  = prefix "k" "k" "kilo"   3
-mega  = prefix "M" "M" "mega"   6
-giga  = prefix "G" "G" "giga"   9
-tera  = prefix "T" "T" "tera"   12
-peta  = prefix "P" "P" "peta"   15
-exa   = prefix "E" "E" "exa"    18
-zetta = prefix "Z" "Z" "zetta"  21
-yotta = prefix "Y" "Y" "yotta"  24
-deci, centi, milli, micro, nano, pico, femto, atto, zepto, yocto :: Prefix
-deci  = prefix "d" "d" "deci"   $ -1
-centi = prefix "c" "c" "centi"  $ -2
-milli = prefix "m" "m" "milli"  $ -3
-micro = prefix "u" "μ" "micro"  $ -6
-nano  = prefix "n" "n" "nano"   $ -9
-pico  = prefix "p" "p" "pico"   $ -12
-femto = prefix "f" "f" "femto"  $ -15
-atto  = prefix "a" "a" "atto"   $ -18
-zepto = prefix "z" "z" "zepto"  $ -21
-yocto = prefix "y" "y" "yocto"  $ -24
-
--- | A list of all 'Prefix'es defined by the SI.
-siPrefixes :: [Prefix]
-siPrefixes = [yocto, zepto, atto, femto, pico, nano, micro, milli, centi, deci, deka, hecto, kilo, mega, giga, tera, peta, exa, zetta, yotta]
 
 -- | Forms a 'UnitName' from a 'Metric' name by applying a metric prefix.
 applyPrefix :: Prefix -> UnitName 'Metric -> UnitName 'NonMetric
@@ -496,7 +460,7 @@ relax = go (typeRep (Proxy :: Proxy m1)) (typeRep (Proxy :: Proxy m2))
 grouped :: UnitName' m a -> UnitName' 'NonMetric a
 grouped = Grouped . weaken
 
-ucumName :: (HasUnitName a) => a -> Maybe String
+ucumName :: (HasUnitName a, NameAtomType a ~ NameAtom) => a -> Maybe String
 ucumName = foldName f . fmap (nameComponent ucum) . ensureSimpleDenominatorsAndPowers . distributePowers . unitName
   where
     f = UnitNameFold {
@@ -517,11 +481,6 @@ ucumName = foldName f . fmap (nameComponent ucum) . ensureSimpleDenominatorsAndP
                             n' <- n
                             return $ "(" ++ n' ++ ")"
     }
-
-prefix :: String -> String -> String -> Int -> Prefix
-prefix i a f = Prefix n
-  where
-    n = atom a f [(ucum, i), (siunitx, '\\' : f)]
 
 -- | Constructs an atomic name for a metric unit.
 metricAtomic :: String -- ^ Unit name in the Unified Code for Units of Measure

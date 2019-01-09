@@ -81,6 +81,15 @@ data DynamicDimension = NoDimension -- ^ The value has no valid dimension.
 
 instance NFData DynamicDimension where
 
+-- | Dynamic dimensions form a 'Semigroup' under 'matchDimensions'.
+instance Semigroup DynamicDimension where
+  (<>) = matchDimensions
+
+-- | Dynamic dimensions form a 'Monoid' under 'matchDimensions'. 'AnyDimension' is the identity.
+instance Monoid DynamicDimension where
+  mempty = AnyDimension
+  mappend = (Data.Semigroup.<>)
+
 -- | Dimensional values, or those that are only possibly dimensional, inhabit this class,
 -- which allows access to a term-level representation of their dimension.
 class HasDynamicDimension a where
@@ -118,11 +127,7 @@ matchDimensions _                   _                              = NoDimension
 
 -- | Determines if a value that has a 'DynamicDimension' is compatible with a specified 'Dimension''.
 isCompatibleWith :: (HasDynamicDimension a) => a -> Dimension' -> Bool
-isCompatibleWith = f . dynamicDimension
-  where
-    f AnyDimension       _             = True
-    f (SomeDimension d1) d2 | d1 == d2 = True
-    f _                  _             = False
+isCompatibleWith x d = hasSomeDimension . (<> SomeDimension d) . dynamicDimension $ x
 
 -- | Determines if a value that has a 'DynamicDimension' in fact has any valid dimension at all.
 hasSomeDimension :: (HasDynamicDimension a) => a -> Bool

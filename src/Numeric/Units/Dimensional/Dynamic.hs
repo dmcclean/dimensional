@@ -16,6 +16,7 @@ Defines types for manipulation of units and quantities without phantom types for
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Numeric.Units.Dimensional.Dynamic
 (
@@ -114,6 +115,14 @@ instance Num a => Semigroup (AnyQuantity a) where
 instance Num a => Monoid (AnyQuantity a) where
   mempty = demoteQuantity (1 Dim.*~ one)
   mappend = (Data.Semigroup.<>)
+
+-- | 'AnyQuantity's form a 'Group' under multiplication, but not under addition because
+-- they may not be added together if their dimensions do not match.
+instance Fractional a => Group (AnyQuantity a) where
+  invert (AnyQuantity d a) = AnyQuantity (D.recip d) (P.recip a)
+  pow (AnyQuantity d a) x = AnyQuantity (d D.^ P.fromIntegral x) (a P.^ x)
+
+instance Fractional a => Abelian (AnyQuantity a)
 
 -- | Possibly a 'Quantity' whose 'Dimension' is only known dynamically.
 --
@@ -281,6 +290,8 @@ instance HasDimension AnyUnit where
   dimension (AnyUnit d _ _) = d
 
 instance N.HasUnitName AnyUnit where
+  type NameMetricality AnyUnit = 'NonMetric
+  type NameAtomType AnyUnit = N.NameAtom
   unitName (AnyUnit _ n _) = n
 
 -- | 'AnyUnit's form a 'Semigroup' under multiplication.
@@ -306,7 +317,7 @@ siUnit d = AnyUnit d (baseUnitName d) 1
 
 -- | Converts a 'Unit' of statically known 'Dimension' into an 'AnyUnit'.
 demoteUnit :: forall m d a.(KnownDimension d) => Unit m d a -> AnyUnit
-demoteUnit u = AnyUnit dim (name $ weaken u) (exactValue u)
+demoteUnit u = AnyUnit dim (N.weaken $ unitName u) (exactValue u)
   where
     dim = dimension (Proxy :: Proxy d)
 

@@ -12,7 +12,7 @@ import Test.Hspec
 
 -- used to avoid type ambiguity
 name' :: Unit m d Double -> UnitName m
-name' = name
+name' = unitName
 
 -- used to avoid type ambiguity and weaken
 name'' :: Unit m d Double -> UnitName 'NonMetric
@@ -52,24 +52,24 @@ spec = do
           describe "UnitName simplification" $ do
             describe "with eliminateOnes" $ do
               it "properly eliminates redundant One from products" $ do
-                let n = name' $ (meter D.* one D.* D.kilo gram D.* one)
-                let n' = name' $ (meter D.* D.kilo gram)
+                let n = name' $ meter D.* one D.* D.kilo gram D.* one
+                let n' = name' $ meter D.* D.kilo gram
                 eliminateOnes n `shouldBe` n'
               it "properly eliminates redundant One from denominator" $ do
                 let n = name' $ meter D./ (one D.* one)
                 let n' = name'' meter
                 eliminateOnes n `shouldBe` n'
               it "properly eliminates powers of One" $ do
-                let n = name' $ (meter D.* one D.^ pos3 D.* liter D./ (one D.^ neg1))
-                let n' = name' $ (meter D.* liter)
+                let n = name' $ meter D.* one D.^ pos3 D.* liter D./ (one D.^ neg1)
+                let n' = name' $ meter D.* liter
                 eliminateOnes n `shouldBe` n'
               it "properly eliminates grouped appearances of One" $ do
-                let n = name' $ (D.grouped (one D.* meter))
+                let n = name' $ D.grouped (one D.* meter)
                 let n' = name' $ D.grouped meter
                 eliminateOnes n `shouldBe` n'
             describe "with eliminateGrouping" $ do
               it "eliminates grouping" $ do
-                let n = name' $ (D.grouped $ D.grouped meter)
+                let n = name' $ D.grouped $ D.grouped meter
                 let n' = name'' meter
                 eliminateGrouping n `shouldBe` n'
               it "eliminates grouping under products" $ do
@@ -80,23 +80,23 @@ spec = do
                 eliminateGrouping n `shouldBe` n'
             describe "with eliminateRedundantPowers" $ do
               it "eliminates zero exponents" $ do
-                let n = name' $ (ampere D.* meter D.^ zero)
-                let n' = name' $ (ampere D.* one)
+                let n = name' $ ampere D.* meter D.^ zero
+                let n' = name' $ ampere D.* one
                 eliminateRedundantPowers n `shouldBe`n'
               it "eliminates one exponents" $ do
-                let n = name' $ (ampere D./ meter D.^ pos1)
-                let n' = name' $ (ampere D./ meter)
+                let n = name' $ ampere D./ meter D.^ pos1
+                let n' = name' $ ampere D./ meter
                 eliminateRedundantPowers n `shouldBe`n'
               it "eliminates exponents of One" $ do
-                let n = name' $ (ampere D.* one D.^ pos3)
-                let n' = name' $ (ampere D.* one)
+                let n = name' $ ampere D.* one D.^ pos3
+                let n' = name' $ ampere D.* one
                 eliminateRedundantPowers n `shouldBe`n'
               it "eliminates nested exponents" $ do
-                let n = name' $ ((meter D.^ neg1) D.^ pos2 D.* kilo gram)
-                let n' = name' $ (meter D.^ neg2 D.* kilo gram)
+                let n = name' $ (meter D.^ neg1) D.^ pos2 D.* kilo gram
+                let n' = name' $ meter D.^ neg2 D.* kilo gram
                 eliminateRedundantPowers n `shouldBe`n'
               it "preserves other exponents" $ do
-                let n = name' $ (ampere D./ meter D.^ pos2)
+                let n = name' $ ampere D./ meter D.^ pos2
                 eliminateRedundantPowers n `shouldBe`n
             describe "with distributePowers" $ do
               it "distributes powers to molecules" $ do

@@ -72,6 +72,7 @@ library
                        Numeric.Units.Dimensional.UnitNames,
                        Numeric.Units.Dimensional.UnitNames.Atoms,
                        Numeric.Units.Dimensional.UnitNames.Languages,
+                       Numeric.Units.Dimensional.UnitNames.Prefixes,
                        Numeric.Units.Dimensional.UnitNames.Internal,
                        Numeric.Units.Dimensional.Variants,
                        Numeric.Units.Dimensional.Float

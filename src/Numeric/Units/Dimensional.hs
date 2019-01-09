@@ -203,7 +203,7 @@ module Numeric.Units.Dimensional
     -- * Constructing Units
     siUnit, one, mkUnitR, mkUnitQ, mkUnitZ, grouped,
     -- * Unit Metadata
-    name, exactValue, weaken, strengthen, exactify,
+    unitName, name, exactValue, weaken, strengthen, exactify,
     -- * Pretty Printing
     showIn,
     -- * On 'Functor', and Conversion Between Number Representations
@@ -276,6 +276,7 @@ way to declare quantities as such a product.
 -}
 
 -- | Extracts the 'UnitName' of a 'Unit'.
+{-# DEPRECATED name "Deprecated in favor of unitName from the HasUnitName class." #-}
 name :: Unit m d a -> UnitName m
 name (Unit n _ _) = n
 
