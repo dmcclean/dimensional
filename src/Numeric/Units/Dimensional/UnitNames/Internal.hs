@@ -4,6 +4,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -17,11 +18,11 @@
 module Numeric.Units.Dimensional.UnitNames.Internal
 where
 
-import Control.Applicative
 import Control.DeepSeq
 import Control.Monad (join)
 import Data.Data hiding (Prefix)
 import Data.Foldable (toList)
+import Data.Traversable
 import Data.Group
 import Data.Kind
 import qualified Data.Map as M
@@ -67,6 +68,8 @@ data UnitName' (m :: Metricality) (a :: Type) where
   deriving (Typeable)
 
 deriving instance Functor (UnitName' m)
+deriving instance Foldable (UnitName' m)
+deriving instance Traversable (UnitName' m)
 deriving instance (Eq a) => Eq (UnitName' m a)
 
 -- As it is for a GADT, this instance cannot be derived or use the generic default implementation
@@ -446,25 +449,15 @@ grouped :: UnitName' m a -> UnitName' 'NonMetric a
 grouped = Grouped . weaken
 
 ucumName :: (HasUnitName a, NameAtomType a ~ NameAtom) => a -> Maybe String
-ucumName = foldName f . fmap (nameComponent ucum) . ensureSimpleDenominatorsAndPowers . distributePowers . name
+ucumName = fmap (foldName f) . traverse (nameComponent ucum) . ensureSimpleDenominatorsAndPowers . distributePowers . name
   where
     f = UnitNameFold {
-      foldOne = Just "1"
-    , foldPrefix = \p n -> (++) <$> prefixName p <*> n
-    , foldProduct = \n1 n2 -> do
-                                n1' <- n1
-                                n2' <- n2
-                                return $ n1' ++ "." ++ n2'
-    , foldQuotient = \n1 n2 -> do
-                                 n1' <- n1
-                                 n2' <- n2
-                                 return $ n1' ++ "/" ++ n2'
-    , foldPower = \n x -> do
-                            n' <- n
-                            return $ n' ++ show x
-    , foldGrouped = \n -> do
-                            n' <- n
-                            return $ "(" ++ n' ++ ")"
+      foldOne = "1"
+    , foldPrefix = \p n -> prefixName p ++ n
+    , foldProduct = \n1 n2 -> n1 ++ "." ++ n2
+    , foldQuotient = \n1 n2 -> n1 ++ "/" ++ n2
+    , foldPower = \n x -> n ++ show x
+    , foldGrouped = \n -> "(" ++ n ++ ")"
     }
 
 -- | Constructs an atomic name for a metric unit.

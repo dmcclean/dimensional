@@ -1,6 +1,8 @@
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveFoldable #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveTraversable #-}
 
 module Numeric.Units.Dimensional.UnitNames.Prefixes
 (
@@ -28,7 +30,7 @@ data Prefix' a = Prefix
                     -- | The scale factor denoted by a metric prefix.
                     scaleExponent :: Int
                   }
-  deriving (Eq, Data, Typeable, Generic, Functor)
+  deriving (Eq, Data, Typeable, Generic, Functor, Foldable, Traversable)
 
 instance (NFData a) => NFData (Prefix' a)
 
