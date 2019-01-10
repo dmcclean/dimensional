@@ -87,7 +87,7 @@ instance (NFData a) => NFData (UnitName' m a) where
 
 -- | `UnitName`s are shown with non-breaking spaces.
 instance Show (UnitName m) where
-  show = abbreviation_en
+  show = stringName $ requiredNameComponent internationalEnglishAbbreviation
 
 stringName :: (HasUnitName a) => (NameAtomType a -> String) -> a -> String
 stringName f = foldString . fmap f . applyTransform ensureSimpleDenominatorsAndPowers . weaken . name
@@ -131,18 +131,6 @@ instance HasUnitName (UnitName' m a) where
   type NameMetricality (UnitName' m a) = m
   type NameAtomType (UnitName' m a) = a
   name = id
-
-abbreviation_en :: (HasUnitName a, NameAtomType a ~ NameAtom) => a -> String
-abbreviation_en = stringName $ definiteNameComponent internationalEnglishAbbreviation
-
-name_en :: (HasUnitName a, NameAtomType a ~ NameAtom) => a -> String
-name_en = stringName $ definiteNameComponent internationalEnglish
-
-prefixAbbreviationEnglish :: Prefix -> String
-prefixAbbreviationEnglish = definiteNameComponent internationalEnglishAbbreviation . prefixName
-
-prefixNameEnglish :: Prefix -> String
-prefixNameEnglish = definiteNameComponent internationalEnglish . prefixName
 
 asAtomic :: UnitName' m a -> Maybe a
 asAtomic (MetricAtomic a) = Just a
@@ -444,14 +432,14 @@ ucumName = fmap (foldName f) . traverse (nameComponent ucum) . applyTransform (e
 metricAtomic :: String -- ^ Unit name in the Unified Code for Units of Measure
              -> String -- ^ Abbreviated name in international English
              -> String -- ^ Full name in international English
-             -> [(Language, String)] -- ^ List of unit names in other 'Language's.
+             -> [(Language 'Optional, String)] -- ^ List of unit names in other 'Language's.
              -> UnitName 'Metric
 metricAtomic i a f ns = MetricAtomic $ atom a f ((ucum, i):ns)
 
 -- | Constructs an atomic name for a unit.
 atomic :: String -- ^ Abbreviated name in international English
        -> String -- ^ Full name in international English
-       -> [(Language, String)] -- ^ List of unit names in other 'Language's.
+       -> [(Language 'Optional, String)] -- ^ List of unit names in other 'Language's.
        -> UnitName 'NonMetric
 atomic a f ns = Atomic $ atom a f ns
 
