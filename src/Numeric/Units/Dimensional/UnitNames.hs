@@ -26,6 +26,8 @@ module Numeric.Units.Dimensional.UnitNames
   prefixName, scaleExponent, scaleFactor,
   -- * Convenience Type Synonyms for Unit Name Transformations
   UnitNameTransformer, UnitNameTransformer2,
+  -- * Unit Name Transforms
+  UnitNameTransform, applyTransform,
   -- * Forgetting Unwanted Phantom Types
   weaken, strengthen, relax,
   isAtomic, asAtomic, ucumName, nameComponent, requiredNameComponent, ucum

@@ -201,7 +201,7 @@ module Numeric.Units.Dimensional
     -- $constants
     _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, pi, tau,
     -- * Constructing Units
-    siUnit, one, mkUnitR, mkUnitQ, mkUnitZ, grouped,
+    siUnit, one, mkUnitR, mkUnitQ, mkUnitZ, grouped, transformName,
     -- * Unit Metadata
     name, exactValue, weaken, strengthen, exactify,
     -- * Pretty Printing
@@ -294,6 +294,13 @@ strengthen (Unit n e v) | Just n' <- Name.strengthen n = Just $ Unit n' e v
 -- | Forms the exact version of a 'Unit'.
 exactify :: Unit m d a -> Unit m d ExactPi
 exactify (Unit n e _) = Unit n e e
+
+-- | Applies a 'UnitNameTransform' to the name of a 'Unit'.
+--
+-- Such a transform is guaranteed to preserve the normal form of the 'UnitName', and thus the
+-- scale factor associated with the unit remains unchanged.
+transformName :: UnitNameTransform -> Unit m d a -> Unit m d a
+transformName t (Unit n e x) = Unit (applyTransform t n) e x
 
 -- | Forms a 'Quantity' by multipliying a number and a unit.
 (*~) :: (Num a) => a -> Unit m d a -> Quantity d a

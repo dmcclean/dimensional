@@ -190,7 +190,7 @@ evaluateMolecules f (Grouped n) = evaluateMolecules f n
 evaluateMolecules f (Weaken n) = evaluateMolecules f n
 
 -- | Convert a 'UnitName' to one in which explicit grouping expressions do not appear.
-eliminateGrouping :: UnitNameTransform a
+eliminateGrouping :: UnitNameTransform' a
 eliminateGrouping = Transform go
   where
     go (Product n1 n2) = Product (go n1) (go n2)
@@ -204,7 +204,7 @@ eliminateGrouping = Transform go
 -- Where 'One' appears in a 'Power' or 'Grouped' expression, that expression is eliminated.
 --
 -- A usage is essential if it is alone, or if it is alone in the numerator of a quotient.
-eliminateOnes :: UnitNameTransform a
+eliminateOnes :: UnitNameTransform' a
 eliminateOnes = Transform go
   where
     go (Product n1 n2) = case (go n1, go n2) of
@@ -223,7 +223,7 @@ eliminateOnes = Transform go
                         n' -> Grouped n'
     go n = n
 
-eliminateRedundantPowers :: UnitNameTransform a
+eliminateRedundantPowers :: UnitNameTransform' a
 eliminateRedundantPowers = Transform go
   where
     go (Product n1 n2) = Product (go n1) (go n2)
@@ -236,7 +236,7 @@ eliminateRedundantPowers = Transform go
     go (Grouped n) = Grouped (go n)
     go n = n
 
-distributePowers :: UnitNameTransform a
+distributePowers :: UnitNameTransform' a
 distributePowers = Transform dp
   where
     dp = \case
@@ -253,7 +253,7 @@ distributePowers = Transform dp
     go x (Weaken n) = weaken (go x n)
     go x n = Power (weaken n) x
 
-ensureSimpleDenominatorsAndPowers :: UnitNameTransform a
+ensureSimpleDenominatorsAndPowers :: UnitNameTransform' a
 ensureSimpleDenominatorsAndPowers = Transform go
   where
     go (Product n1 n2) = Product (go n1) (go n2)
@@ -263,10 +263,10 @@ ensureSimpleDenominatorsAndPowers = Transform go
     go (Grouped n) = Grouped (go n)
     go n = n
 
-productNormalForm :: (Ord a) => UnitNameTransform a
+productNormalForm :: (Ord a) => UnitNameTransform' a
 productNormalForm = NormalForm productOfMolecules
 
-quotientNormalForm :: (Ord a) => UnitNameTransform a
+quotientNormalForm :: (Ord a) => UnitNameTransform' a
 quotientNormalForm = NormalForm $ fromMolecules . partitionMolecules
   where
     partitionMolecules :: MolecularUnitName a -> (MolecularUnitName a, MolecularUnitName a)
@@ -462,16 +462,18 @@ product = go . toList
     go [] = One
     go ns = foldl1 Product ns
 
--- | A 'UnitNameTransform' is a function on 'UnitName'' which is guaranteed to preserve
+type UnitNameTransform = UnitNameTransform' NameAtom
+
+-- | A 'UnitNameTransform'' is a function on 'UnitName'' which is guaranteed to preserve
 -- normal forms.
-data UnitNameTransform a where
-  Identity :: UnitNameTransform a
-  Compose :: UnitNameTransform a -> UnitNameTransform a -> UnitNameTransform a
-  Transform :: (UnitName' 'NonMetric a -> UnitName' 'NonMetric a) -> UnitNameTransform a
-  NormalForm :: (Ord a) => (MolecularUnitName a -> UnitName' 'NonMetric a) -> UnitNameTransform a
+data UnitNameTransform' a where
+  Identity :: UnitNameTransform' a
+  Compose :: UnitNameTransform' a -> UnitNameTransform' a -> UnitNameTransform' a
+  Transform :: (UnitName' 'NonMetric a -> UnitName' 'NonMetric a) -> UnitNameTransform' a
+  NormalForm :: (Ord a) => (MolecularUnitName a -> UnitName' 'NonMetric a) -> UnitNameTransform' a
 
 -- | 'UnitNameTransformer's form a semigroup under composition.
-instance Semigroup (UnitNameTransform a) where
+instance Semigroup (UnitNameTransform' a) where
   t <> Identity = t
   Identity <> t = t
   n@(NormalForm _) <> _ = n
@@ -479,12 +481,12 @@ instance Semigroup (UnitNameTransform a) where
   stimes = stimesMonoid
 
 -- | 'UnitNameTransformer's form a monoid under composition.
-instance Monoid (UnitNameTransform a) where
+instance Monoid (UnitNameTransform' a) where
   mempty = Identity
   mappend = (Data.Semigroup.<>)
 
 -- | Converts a 'UnitNameTransform' to a function on 'UnitName''s.
-applyTransform :: UnitNameTransform a -> UnitName' m a -> UnitName' m a
+applyTransform :: UnitNameTransform' a -> UnitName' m a -> UnitName' m a
 applyTransform Identity = id
 applyTransform (Compose t2 t1) = applyTransform t2 . applyTransform t1
 applyTransform (NormalForm f) = applyTransform (Transform (f . toMolecules))
