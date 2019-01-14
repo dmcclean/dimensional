@@ -141,7 +141,7 @@ instance (Num a) => Semigroup (SQuantity s d a) where
 -- | 'Quantity's of a given 'Dimension' form a 'Monoid' under addition.
 instance (Num a) => Monoid (SQuantity s d a) where
   mempty = Quantity 0
-  mappend = liftQ2 (+)
+  mappend = (Data.Semigroup.<>)
 
 instance (Num a) => Group (SQuantity s d a) where
   invert = dmap P.negate

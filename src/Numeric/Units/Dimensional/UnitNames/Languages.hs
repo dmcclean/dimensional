@@ -49,7 +49,7 @@ instance NFData (Language o) where
           (OptionalLanguage x) -> rnf x
           (RequiredLanguage x) -> rnf x
 
-weakenLanguage :: Language o -> Language Optional
+weakenLanguage :: Language o -> Language 'Optional
 weakenLanguage (RequiredLanguage x) = OptionalLanguage x
 weakenLanguage x@(OptionalLanguage _) = x
 
