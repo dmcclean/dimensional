@@ -13,6 +13,7 @@ module Numeric.Units.Dimensional.UnitNames.Languages
 (
   Language(..)
 , Optionality(..)
+, weakenLanguage
 , languageName
 , ucum
 , internationalEnglish
@@ -47,6 +48,10 @@ instance NFData (Language o) where
   rnf = \case
           (OptionalLanguage x) -> rnf x
           (RequiredLanguage x) -> rnf x
+
+weakenLanguage :: Language o -> Language Optional
+weakenLanguage (RequiredLanguage x) = OptionalLanguage x
+weakenLanguage x@(OptionalLanguage _) = x
 
 languageName :: Language o -> String
 languageName (OptionalLanguage l) = l

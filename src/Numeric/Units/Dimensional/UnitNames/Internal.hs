@@ -87,10 +87,13 @@ instance (NFData a) => NFData (UnitName' m a) where
 
 -- | `UnitName`s are shown with non-breaking spaces.
 instance Show (UnitName m) where
-  show = stringName $ requiredNameComponent internationalEnglishAbbreviation
+  show = requiredStringName internationalEnglishAbbreviation
 
-stringName :: (HasUnitName a) => (NameAtomType a -> String) -> a -> String
-stringName f = foldString . fmap f . applyTransform ensureSimpleDenominatorsAndPowers . weaken . name
+stringName :: (HasUnitName a, NameAtomType a ~ NameAtom) => Language 'Optional -> a -> Maybe String
+stringName l = fmap foldString . traverse (nameComponent l) . applyTransform ensureSimpleDenominatorsAndPowers . weaken . name
+
+requiredStringName :: (HasUnitName a, NameAtomType a ~ NameAtom) => Language 'Required -> a -> String
+requiredStringName l = foldString . fmap (requiredNameComponent l) . applyTransform ensureSimpleDenominatorsAndPowers . weaken . name
 
 foldString :: (IsString a, Semigroup a) => UnitName' m a -> a
 foldString = foldName $ UnitNameFold {

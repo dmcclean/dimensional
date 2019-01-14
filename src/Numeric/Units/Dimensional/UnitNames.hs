@@ -30,7 +30,7 @@ module Numeric.Units.Dimensional.UnitNames
   UnitNameTransform, applyTransform,
   -- * Forgetting Unwanted Phantom Types
   weaken, strengthen, relax,
-  isAtomic, asAtomic, ucumName, nameComponent, requiredNameComponent, ucum
+  isAtomic, asAtomic, ucumName, nameComponent, requiredNameComponent, ucum, stringName, requiredStringName
 )
 where
 
