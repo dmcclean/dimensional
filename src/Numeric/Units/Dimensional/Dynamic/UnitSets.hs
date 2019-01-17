@@ -19,7 +19,7 @@ module Numeric.Units.Dimensional.Dynamic.UnitSets
 )
 where
 
-import Numeric.Units.Dimensional.UnitNames (name, NameAtom, Metricality(..), UnitName, Prefix, asAtomic, strengthen, prefixName, nameComponent, weaken)
+import Numeric.Units.Dimensional.UnitNames (name, NameAtom, Metricality(..), Prefix, asAtomic, strengthen, nameComponent)
 import Numeric.Units.Dimensional.UnitNames.Internal (UnitName'(..))
 import Numeric.Units.Dimensional.UnitNames.Languages
 import Numeric.Units.Dimensional.UnitNames.Molecules (NameMolecule, NameMolecule'(..))
