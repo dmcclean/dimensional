@@ -1,6 +1,7 @@
 {-# OPTIONS_HADDOCK not-home #-}
 
 {-# LANGUAGE AutoDeriveTypeable #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveFunctor #-}
@@ -71,6 +72,9 @@ deriving instance Functor (UnitName' m)
 deriving instance Foldable (UnitName' m)
 deriving instance Traversable (UnitName' m)
 deriving instance (Eq a) => Eq (UnitName' m a)
+#if MIN_VERSION_base(4,13,0)
+deriving instance (Ord a) => Ord (UnitName' m a)
+#endif
 
 -- As it is for a GADT, this instance cannot be derived or use the generic default implementation
 instance (NFData a) => NFData (UnitName' m a) where
@@ -145,7 +149,7 @@ asAtomic _ = Nothing
 isAtomic :: UnitName' m a -> Bool
 isAtomic = isJust . asAtomic
 
-asMolecular :: UnitName' m a -> Maybe (NameMolecule a)
+asMolecular :: UnitName' m a -> Maybe (NameMolecule' a)
 asMolecular (MetricAtomic a) = Just (NameMolecule Metric Nothing a)
 asMolecular (Atomic a) = Just (NameMolecule NonMetric Nothing a)
 asMolecular (Prefixed p a) = Just (NameMolecule NonMetric (Just p) a)
@@ -181,7 +185,7 @@ evaluate = foldName $ UnitNameFold {
   , foldGrouped = id
   }
 
-evaluateMolecules :: (Group b) => (NameMolecule a -> b) -> UnitName' m a -> b
+evaluateMolecules :: (Group b) => (NameMolecule' a -> b) -> UnitName' m a -> b
 evaluateMolecules _ One = mempty
 evaluateMolecules f (MetricAtomic a) = f (NameMolecule Metric Nothing a)
 evaluateMolecules f (Atomic a) = f (NameMolecule NonMetric Nothing a)
@@ -282,7 +286,7 @@ quotientNormalForm = NormalForm $ fromMolecules . partitionMolecules
 productOfMolecules :: MolecularUnitName a -> UnitName' 'NonMetric a
 productOfMolecules (MolecularUnitName m) = product . fmap build . M.toList $ m
   where
-    build :: (NameMolecule a, Int) -> UnitName' 'NonMetric a
+    build :: (NameMolecule' a, Int) -> UnitName' 'NonMetric a
     build (_, 0) = One
     build ((NameMolecule _ (Just p) a), 1) = Prefixed p a
     build ((NameMolecule Metric Nothing a), 1) = Weaken (MetricAtomic a)

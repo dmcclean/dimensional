@@ -62,6 +62,7 @@ library
                        Numeric.Units.Dimensional.Dimensions.TermLevel,
                        Numeric.Units.Dimensional.Dimensions.TypeLevel,
                        Numeric.Units.Dimensional.Dynamic,
+                       Numeric.Units.Dimensional.Dynamic.UnitSets,
                        Numeric.Units.Dimensional.FixedPoint,
                        Numeric.Units.Dimensional.Functor,
                        Numeric.Units.Dimensional.NonSI,

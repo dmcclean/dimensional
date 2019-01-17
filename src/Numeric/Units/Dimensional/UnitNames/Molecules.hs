@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveTraversable #-}
 
 module Numeric.Units.Dimensional.UnitNames.Molecules
 where
@@ -12,18 +13,21 @@ import Data.Group
 import qualified Data.Map as M
 import Data.Semigroup
 import GHC.Generics
+import Numeric.Units.Dimensional.UnitNames.Atoms (NameAtom)
 import Numeric.Units.Dimensional.UnitNames.Prefixes
 import Numeric.Units.Dimensional.Variants (Metricality)
 import Prelude
 
-data NameMolecule a
-  = NameMolecule Metricality (Maybe (Prefix' a)) a
-  deriving (Eq, Data, Typeable, Generic, NFData, Functor)
+type NameMolecule = NameMolecule' NameAtom
 
-instance (Ord a) => Ord (NameMolecule a) where
+data NameMolecule' a
+  = NameMolecule Metricality (Maybe (Prefix' a)) a
+  deriving (Eq, Data, Typeable, Generic, NFData, Functor, Foldable, Traversable)
+
+instance (Ord a) => Ord (NameMolecule' a) where
   compare (NameMolecule _ p1 n1) (NameMolecule _ p2 n2) = compare n1 n2 <> compare p1 p2
 
-newtype MolecularUnitName a = MolecularUnitName (M.Map (NameMolecule a) Int)
+newtype MolecularUnitName a = MolecularUnitName (M.Map (NameMolecule' a) Int)
 
 instance (Ord a) => Semigroup (MolecularUnitName a) where
   (MolecularUnitName m1) <> (MolecularUnitName m2) = MolecularUnitName $ M.unionWith (+) m1 m2

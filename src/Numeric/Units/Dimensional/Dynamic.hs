@@ -31,9 +31,9 @@ module Numeric.Units.Dimensional.Dynamic
   -- * Dynamic Units
 , AnyUnit
 , demoteUnit, promoteUnit, demoteUnit'
-, siUnit, anyUnitName
+, siUnit
   -- ** Arithmetic on Dynamic Units
-, (*), (/), (^), recip, applyPrefix
+, (*), (/), (^), grouped, recip, applyPrefix
 ) where
 
 import Control.DeepSeq
@@ -47,7 +47,7 @@ import Data.Monoid (Monoid(..))
 import GHC.Generics
 import Prelude (Eq(..), Num, Fractional, Floating, Show(..), Bool(..), Maybe(..), (.), ($), (++), (&&), id, otherwise, error)
 import qualified Prelude as P
-import Numeric.Units.Dimensional hiding ((*~), (/~), (*), (/), (^), recip, nroot, siUnit)
+import Numeric.Units.Dimensional hiding ((*~), (/~), (*), (/), (^), recip, nroot, siUnit, grouped)
 import qualified Numeric.Units.Dimensional as Dim
 import Numeric.Units.Dimensional.Coercion
 import Numeric.Units.Dimensional.UnitNames (UnitName, baseUnitName)
@@ -308,9 +308,6 @@ instance Group AnyUnit where
   invert = recip
   pow n x = n ^ x
 
-anyUnitName :: AnyUnit -> UnitName 'NonMetric
-anyUnitName (AnyUnit _ n _) = n
-
 -- | The dynamic SI coherent unit of a given dimension.
 siUnit :: Dimension' -> AnyUnit
 siUnit d = AnyUnit d (baseUnitName d) 1
@@ -354,6 +351,11 @@ recip (AnyUnit d n e) = AnyUnit (D.recip d) (N.nOne N./ n) (P.recip e)
 -- | Raises a dynamic unit to an integer power.
 (^) :: (P.Integral a) => AnyUnit -> a -> AnyUnit
 (AnyUnit d n e) ^ x = AnyUnit (d D.^ P.fromIntegral x) (n N.^ P.fromIntegral x) (e P.^^ x)
+
+-- | Constructs an 'AnyUnit' by applying a grouping operation to
+-- another 'AnyUnit', which may be useful to express precedence.
+grouped :: AnyUnit -> AnyUnit
+grouped (AnyUnit d n e) = AnyUnit d (N.grouped n) e
 
 -- | Applies a prefix to a dynamic unit.
 -- Returns 'Nothing' if the 'Unit' was 'NonMetric' and thus could not accept a prefix.
