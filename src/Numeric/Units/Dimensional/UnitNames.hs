@@ -27,10 +27,10 @@ module Numeric.Units.Dimensional.UnitNames
   -- * Convenience Type Synonyms for Unit Name Transformations
   UnitNameTransformer, UnitNameTransformer2,
   -- * Unit Name Transforms
-  UnitNameTransform, applyTransform,
+  UnitNameTransform, applyTransform, productNormalForm, quotientNormalForm,
   -- * Forgetting Unwanted Phantom Types
   weaken, strengthen, relax,
-  isAtomic, asAtomic, ucumName, nameComponent, requiredNameComponent, ucum, stringName, requiredStringName
+  isAtomic, asAtomic, ucumName, nameComponent, requiredNameComponent, ucum, stringName, requiredStringName, foldString
 )
 where
 

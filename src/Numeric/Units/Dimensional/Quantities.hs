@@ -68,14 +68,15 @@ module Numeric.Units.Dimensional.Quantities
   DMolarEnergy, DMolarEntropy, DMolarHeatCapacity, DExposure, DAbsorbedDoseRate,
   DImpulse, DMomentum, DMassFlow, DVolumeFlow, DGravitationalParameter, DKinematicViscosity, DFirstMassMoment, DMomentOfInertia, DAngularMomentum,
   DThermalResistivity, DThermalConductance, DThermalResistance, DHeatTransferCoefficient, DThermalAdmittance, DThermalInsulance,
-  DJerk, DAngle, DThrust, DTorque, DEnergyPerUnitMass
+  DJerk, DAngle, DThrust, DTorque, DEnergyPerUnitMass,
+  DOne, DLength, DMass, DTime, DElectricCurrent, DThermodynamicTemperature, DAmountOfSubstance, DLuminousIntensity
 )
 where
 
 import Numeric.Units.Dimensional
   ( Dimension (Dim), Quantity, Dimensionless
-  , DOne, DLuminousIntensity, DThermodynamicTemperature
-  , Unit, DLength, (^)  -- Used only for 'square' and 'cubic'.
+  , DOne, DLength, DMass, DTime, DElectricCurrent, DThermodynamicTemperature, DAmountOfSubstance, DLuminousIntensity
+  , Unit, (^)  -- Used only for 'square' and 'cubic'.
   , Metricality(..)
   )
 import Numeric.NumType.DK.Integers

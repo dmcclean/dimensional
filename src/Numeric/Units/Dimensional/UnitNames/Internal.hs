@@ -102,6 +102,7 @@ requiredStringName l = foldString . fmap (requiredNameComponent l) . applyTransf
 foldString :: (IsString a, Semigroup a) => UnitName' m a -> a
 foldString = foldName $ UnitNameFold {
     foldOne = fromString "1"
+  , foldAtom = id
   , foldPrefix = \p n -> prefixName p <> n
   , foldProduct = \n1 n2 -> n1 <> fromString "\xA0" <> n2
   , foldQuotient = \n1 n2 -> n1 <> fromString "\xA0/\xA0" <> n2
@@ -109,10 +110,10 @@ foldString = foldName $ UnitNameFold {
   , foldGrouped = \n -> fromString "(" <> n <> fromString ")"
   }
 
-foldName :: UnitNameFold a -> UnitName' m a -> a
+foldName :: UnitNameFold a b -> UnitName' m a -> b
 foldName f One = foldOne f
-foldName _ (MetricAtomic a) = a
-foldName _ (Atomic a) = a
+foldName f (MetricAtomic a) = foldAtom f a
+foldName f (Atomic a) = foldAtom f a
 foldName f (Prefixed p n) = foldPrefix f p n
 foldName f (Product n1 n2) = foldProduct f (foldName f n1) (foldName f n2)
 foldName f (Quotient n1 n2) = foldQuotient f (foldName f n1) (foldName f n2)
@@ -120,13 +121,14 @@ foldName f (Power n x) = foldPower f (foldName f n) x
 foldName f (Grouped n) = foldGrouped f (foldName f n)
 foldName f (Weaken n) = foldName f n
 
-data UnitNameFold a = UnitNameFold 
-  { foldOne :: a
-  , foldPrefix :: Prefix' a -> a -> a
-  , foldProduct :: a -> a -> a
-  , foldQuotient :: a -> a -> a
-  , foldPower :: a -> Int -> a
-  , foldGrouped :: a -> a
+data UnitNameFold a b = UnitNameFold 
+  { foldOne :: b
+  , foldAtom :: a -> b
+  , foldPrefix :: Prefix' a -> a -> b
+  , foldProduct :: b -> b -> b
+  , foldQuotient :: b -> b -> b
+  , foldPower :: b -> Int -> b
+  , foldGrouped :: b -> b
   }
 
 class HasUnitName a where
@@ -178,6 +180,7 @@ asSimple n | isSimple n = weaken n
 evaluate :: (Group a) => UnitName' m a -> a
 evaluate = foldName $ UnitNameFold {
     foldOne = mempty
+  , foldAtom = id
   , foldPrefix = \p n -> prefixName p `mappend` n
   , foldProduct = mappend
   , foldQuotient = \n1 n2 -> n1 `mappend` (invert n2)
@@ -428,6 +431,7 @@ ucumName = fmap (foldName f) . traverse (nameComponent ucum) . applyTransform (e
   where
     f = UnitNameFold {
       foldOne = "1"
+    , foldAtom = id
     , foldPrefix = \p n -> prefixName p ++ n
     , foldProduct = \n1 n2 -> n1 ++ "." ++ n2
     , foldQuotient = \n1 n2 -> n1 ++ "/" ++ n2
