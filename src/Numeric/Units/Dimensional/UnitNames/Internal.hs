@@ -30,6 +30,7 @@ import qualified Data.Map as M
 import Data.Maybe (isJust)
 import Data.Ord
 import Data.Semigroup (Semigroup(..), stimesMonoid)
+import qualified Data.Set as S
 import Data.String (IsString(..))
 import Numeric.Units.Dimensional.Dimensions.TermLevel (Dimension', asList, HasDimension(..))
 import Numeric.Units.Dimensional.UnitNames.Atoms
@@ -188,6 +189,17 @@ evaluate = foldName $ UnitNameFold {
   , foldGrouped = id
   }
 
+atomizePrefixes :: (Semigroup a) => UnitName' m a -> UnitName' m a
+atomizePrefixes One = One
+atomizePrefixes n@(MetricAtomic _) = n
+atomizePrefixes n@(Atomic _) = n
+atomizePrefixes (Prefixed p a) = Atomic (prefixName p <> a)
+atomizePrefixes (Product n1 n2) = Product (atomizePrefixes n1) (atomizePrefixes n2)
+atomizePrefixes (Quotient n1 n2) = Quotient (atomizePrefixes n1) (atomizePrefixes n2)
+atomizePrefixes (Power n x) = Power (atomizePrefixes n) x
+atomizePrefixes (Grouped n) = Grouped (atomizePrefixes n)
+atomizePrefixes (Weaken n) = weaken $ atomizePrefixes n
+
 evaluateMolecules :: (Group b) => (NameMolecule' a -> b) -> UnitName' m a -> b
 evaluateMolecules _ One = mempty
 evaluateMolecules f (MetricAtomic a) = f (NameMolecule Metric Nothing a)
@@ -301,6 +313,17 @@ productOfMolecules (MolecularUnitName m) = product . fmap build . M.toList $ m
 toMolecules :: (Ord a) => UnitName' m a -> MolecularUnitName a
 toMolecules = evaluateMolecules (\m -> MolecularUnitName $ M.singleton m 1)
 
+atoms :: (Ord a, Semigroup a) => UnitName' m a -> S.Set a
+atoms = foldName $ UnitNameFold {
+          foldOne = S.empty
+        , foldAtom = S.singleton
+        , foldPrefix = \p n -> S.singleton (prefixName p <> n)
+        , foldProduct = S.union
+        , foldQuotient = S.union
+        , foldPower = \n _ -> n
+        , foldGrouped = id
+        }
+
 -- reduce by algebraic simplifications
 {-# DEPRECATED reduce "This function has strange and undocumented semantics, and will be removed in favor of more clearly documented algebraic maniupulation functions." #-}
 reduce :: UnitName m -> UnitName m
@@ -327,7 +350,7 @@ reduce' n@(Weaken (MetricAtomic _)) = n
 reduce' n = n
 
 -- | The name of the unit of dimensionless values.
-nOne :: UnitName 'NonMetric
+nOne :: UnitName' 'NonMetric a
 nOne = One
 
 nMeter :: UnitName 'Metric

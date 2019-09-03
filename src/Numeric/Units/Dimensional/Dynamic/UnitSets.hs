@@ -9,6 +9,7 @@ module Numeric.Units.Dimensional.Dynamic.UnitSets
 , singleton
 , singleton'
 , fromList
+, toList
 , applyLanguages
 , applyPrefixes
 , mapNames
@@ -18,6 +19,7 @@ module Numeric.Units.Dimensional.Dynamic.UnitSets
 , isAmbiguous
 , partitionByAmbiguity
 , resolve
+, resolveWith
 , units
 )
 where
@@ -63,6 +65,9 @@ singleton' u = case asAtomic (name u) of
 fromList :: [AnyUnit] -> UnitSet
 fromList = foldMap singleton'
 
+toList :: UnitSet' a -> [(a, [AnyUnit])]
+toList (UnitSet n) = M.toList n
+
 applyLanguages :: [Language 'Optional] -> UnitSet' NameMolecule -> UnitSet' String
 applyLanguages ls = mapUnitSet go
   where
@@ -99,10 +104,7 @@ mapNames' f = mapUnitSet go
     go n u = foldMap (\n' -> singleton n' u) $ f n
 
 mapUnitSet :: (Ord b) => (a -> AnyUnit -> UnitSet' b) -> UnitSet' a -> UnitSet' b
-mapUnitSet f = foldMap (uncurry f) . toList
-  where
-    toList :: UnitSet' a -> [(a, AnyUnit)]
-    toList (UnitSet us) = join $ fmap (traverse id) $ M.toList us
+mapUnitSet f = foldMap (uncurry f) . join . fmap (traverse id) . toList
 
 units :: UnitSet' a -> [AnyUnit]
 units (UnitSet us) = join $ M.elems us
@@ -117,8 +119,8 @@ partitionByAmbiguity :: UnitSet' n -> (UnitSet' n, UnitSet' n)
 partitionByAmbiguity (UnitSet u) = let (unamb, amb) = M.partition (\us -> length us <= 1) u
                                     in (UnitSet unamb, UnitSet amb)
 
-foldAnyUnit :: (Semigroup a, Applicative f) => (a -> f AnyUnit) -> UnitName' m a -> f AnyUnit
-foldAnyUnit f = foldName $ UnitNameFold {
+resolveWith :: (Semigroup a, Applicative f) => (a -> f AnyUnit) -> UnitName' m a -> f AnyUnit
+resolveWith f = foldName $ UnitNameFold {
     foldOne = pure $ demoteUnit' one
   , foldAtom = f
   , foldPrefix = \p n -> f (prefixName p <> n)
@@ -129,4 +131,4 @@ foldAnyUnit f = foldName $ UnitNameFold {
   }
 
 resolve :: (Ord a, Semigroup a) => UnitSet' a -> UnitName' m a -> [AnyUnit]
-resolve us = foldAnyUnit (\n -> lookup n us)
+resolve us = resolveWith (\n -> lookup n us)
